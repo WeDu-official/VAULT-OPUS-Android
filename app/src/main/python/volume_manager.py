@@ -11,7 +11,17 @@ from datetime import datetime
 from typing import Tuple, Optional
 
 # Constants
-SRC_DIR = Path(__file__).resolve().parent # The 'src' folder containing this file
+import platform
+if 'android' in platform.platform().lower():
+    try:
+        from java import jclass
+        context = jclass('com.chaquo.python.Python').getPlatform().getContext()
+        SRC_DIR = Path(str(context.getFilesDir().getAbsolutePath()))
+    except:
+        SRC_DIR = Path(__file__).resolve().parent
+else:
+    SRC_DIR = Path(__file__).resolve().parent
+
 VOLUMES_CONFIGS_DIR = SRC_DIR / "VOLUMES_CONFIGS"
 DATABASES_DIR = SRC_DIR / "DATABASES"
 SHARABLES_DIR = SRC_DIR / "SHARABLES"

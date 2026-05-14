@@ -41,7 +41,23 @@ class ConfigManager:
         }
     }
 
-    def __init__(self, config_path: str = "config.json"):
+    def __init__(self, config_path: Optional[str] = None):
+        if 'android' in os.environ.get('PYTHONPATH', '').lower() or os.path.exists('/system/bin/app_process'):
+            try:
+                from java import jclass
+                context = jclass('com.chaquo.python.Python').getPlatform().getContext()
+                writable_base = str(context.getFilesDir().getAbsolutePath())
+                
+                # If a path was provided, but it's likely in assets, redirect to writable dir
+                if config_path and ("chaquopy" in config_path or "assets" in config_path):
+                     config_path = os.path.join(writable_base, os.path.basename(config_path))
+                elif not config_path:
+                     config_path = os.path.join(writable_base, "config.json")
+            except:
+                config_path = config_path or "config.json"
+        else:
+            config_path = config_path or "config.json"
+
         self.config_path = Path(config_path)
         self._config: Dict[str, Any] = {}
         self._load_config()
