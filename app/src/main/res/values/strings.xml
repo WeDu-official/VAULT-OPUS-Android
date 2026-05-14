@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Vault Opus</string>
+    <string name="title_activity_main">Vault Opus</string>
+    <string name="package_name">com.vov.vaultopus</string>
+    <string name="custom_url_scheme">com.vov.vaultopus</string>
+</resources>
