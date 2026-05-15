@@ -184,10 +184,23 @@ class ConfigManager:
 _config_instance: Optional[ConfigManager] = None
 
 
-def get_config(config_path: str = "config.json") -> ConfigManager:
+def get_config(config_path: Optional[str] = None) -> ConfigManager:
     """Get or create global configuration instance."""
     global _config_instance
+    
     if _config_instance is None:
+        if config_path is None:
+            # Automatic path resolution if not specified
+            if 'android' in os.environ.get('PYTHONPATH', '').lower() or os.path.exists('/system/bin/app_process'):
+                try:
+                    from java import jclass
+                    context = jclass('com.chaquo.python.Python').getPlatform().getContext()
+                    config_path = os.path.join(str(context.getFilesDir().getAbsolutePath()), "config.json")
+                except:
+                    config_path = "config.json"
+            else:
+                config_path = "config.json"
+
         _config_instance = ConfigManager(config_path)
     return _config_instance
 

@@ -1,4 +1,17 @@
-#VAULT_OPUS.py
+#---------------------------------------------------------------------
+#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
+#I HAD MADE THIS PROJECT FOR FREE FOR ALL
+#from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
+#this code will still be here so DO GOOD NO EVIL....good luck :)
+#---------------------------------------------------------------------
+#[]===================THE ENCODING FIX==========================[]
+try:
+    from encoding_fix import apply as _fix_encoding
+    _fix_encoding()
+except Exception:
+    pass
+#[]=================START OF ACTUAL CODE========================[]
 import sys
 import aiohttp
 import discord
@@ -16,29 +29,59 @@ from platform_handler import PlatformHandler
 
 # Load configuration
 VAULT_OPUS_SRC_DIR = os.path.dirname(os.path.abspath(__file__))
-token = get_token()
+
+def get_writable_dir():
+    if 'android' in os.environ.get('PYTHONPATH', '').lower() or os.path.exists('/system/bin/app_process'):
+        try:
+            from java import jclass
+            context = jclass('com.chaquo.python.Python').getPlatform().getContext()
+            return str(context.getFilesDir().getAbsolutePath())
+        except:
+            return VAULT_OPUS_SRC_DIR
+    return VAULT_OPUS_SRC_DIR
+
+WRITABLE_DIR = get_writable_dir()
+
+def get_bot_token():
+    try:
+        # Pass the correct config path
+        return get_token()
+    except Exception:
+        return None
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
+intents.members = True  # Ensure this intent is enabled for fetching members if needed
 
 log = logging.getLogger('VAULT_OPUS_Bot')
-log.setLevel(logging.INFO)
+log.setLevel(logging.INFO)  # Set to INFO, WARNING, or DEBUG depending on verbosity
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 handler.setFormatter(formatter)
 if not log.handlers:
     log.addHandler(handler)
 
+discord_logger = logging.getLogger('discord')
+discord_logger.setLevel(logging.WARNING)
+discord_logger.addHandler(handler)
+
+aiohttp_logger = logging.getLogger('aiohttp')
+aiohttp_logger.setLevel(logging.WARNING)
+aiohttp_logger.addHandler(handler)
+
 file_table_columns = [
     'base_filename', 'part_number', 'total_parts',
     'message_id', 'channel_id', 'relative_path_in_archive', 'root_upload_name', 'upload_timestamp',
-    'is_nicknamed', 'original_base_filename', 'is_base_filename_nicknamed',
+    'is_nicknamed',
+    'original_base_filename', 'is_base_filename_nicknamed',
     'encryption_mode', 'encryption_key_auto', 'password_seed_hash',
-    'store_hash_flag', 'version', 'itemid', 'raw_chunk_size', 'chunkhash'
+    'store_hash_flag',
+    'version',
+    'itemid',
+    'raw_chunk_size', 'chunkhash'
 ]
 
-config_path = os.path.join(VAULT_OPUS_SRC_DIR, "config.json")
+config_path = os.path.join(WRITABLE_DIR, "config.json")
 config_obj = get_config(config_path)
 max_concurrent = config_obj._config.get("upload", {}).get("max_concurrent", 3)
 
@@ -48,10 +91,25 @@ sema = asyncio.Semaphore(max_concurrent)
 
 class FileBotAPI(commands.Bot):
     def __init__(self, *, intents: discord.Intents):
-        super().__init__(command_prefix="/", intents=intents)
+        # noinspection PyTypeChecker
+        super().__init__(command_prefix=[chr(47)], intents=intents)
         self.upload_semaphore = asyncio.Semaphore(max_concurrent)
+        self._upload_semaphore_initial_capacity = max_concurrent
+        self.download_queue = asyncio.Queue()
+        self.download_semaphore = asyncio.Semaphore(max_concurrent)
+        self.delete_task_queue = asyncio.Queue()
+        self.deletion_task = None
+        self.user_uploading: Dict[int, List[str]] = {}
+        self.user_downloading: Dict[int, str] = {}
         self.http_session = None
+        self.log_prefix = "[FileBotAPI]"
+        self.total_parts_cache: Dict[str, int] = {}
+        self._db_table_init_status: Dict[str, bool] = {}
+        self.discord_api_delay = 0.05
+        self.batch_size_discord_checks = 50
+        self.batch_delay_discord_checks = 2.0
         self.log = log
+        self.file_table_columns = file_table_columns
         self.db = db
         self.version_manager = version_manager
 
@@ -59,8 +117,15 @@ class FileBotAPI(commands.Bot):
         self.http_session = aiohttp.ClientSession()
 
     async def on_ready(self):
-        user_info = f"{self.user.name} (ID: {self.user.id})" if self.user else "Unknown User"
-        self.log.info(f'Logged in as {user_info}')
+        self.log.info(f'Logged in as {self.user.name} (ID: {self.user.id})')
+        self.user_uploading.clear()
+        self.user_downloading.clear()
+        self.log.info("Cleared user_uploading and user_downloading states on startup.")
+
+    async def on_message(self, message: discord.Message):
+        if message.author == self.user:
+            return
+        await self.process_commands(message)
 
 async def run_cli(args_list=None):
     parser = argparse.ArgumentParser(description="VAULT_OPUS CLI Tool")
@@ -146,6 +211,11 @@ async def run_cli(args_list=None):
 
     bot = FileBotAPI(intents=intents)
     
+    token = get_bot_token()
+    if not token:
+        print("[CLI] Error: Discord token not set in config.json")
+        return
+
     # Run the bot in the background
     bot_task = asyncio.create_task(bot.start(token))
     
