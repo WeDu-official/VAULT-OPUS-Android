@@ -1,0 +1,9 @@
+discord.py>=2.5.2
+aiohttp>=3.11.18
+fastapi
+uvicorn
+websockets
+pydantic
+aiofiles
+cryptography
+powerdb>=2.2.5.3

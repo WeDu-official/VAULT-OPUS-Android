@@ -1,0 +1,3 @@
+# Dependencies for Android/Mobile builds
+pyjnius
+# 'android' is usually provided by the build environment (e.g. python-for-android)
