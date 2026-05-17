@@ -1,8 +1,21 @@
+#---------------------------------------------------------------------
+#encryption_upload.py (Azazyel) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
+#I HAD MADE THIS PROJECT FOR FREE FOR ALL
+#from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
+#this code will still be here so DO GOOD NO EVIL....good luck :)
+#---------------------------------------------------------------------
+#[]===================THE ENCODING FIX==========================[]
+from encoding_fix import apply as _fix_encoding
+_fix_encoding()
+#[]=================START OF ACTUAL CODE========================[]
 from typing import Optional, Tuple
-import hashlib
 from cryptography.fernet import Fernet
 import discord
 from encryption_base import encrybase
+import argon2
+from argon2 import PasswordHasher
+
 class EncryptionManager:
     def __init__(self, db, version_manager, utils, log, encryption):
         self.db = db
@@ -10,7 +23,15 @@ class EncryptionManager:
         self.version_manager = version_manager
         self.log = log
         self.encryption = encryption
-
+        # Argon2id hasher for password hash storage
+        # Parameters must match encryption_base.py for consistency
+        self._ph = PasswordHasher(
+            time_cost=3,
+            memory_cost=65536,
+            parallelism=4,
+            hash_len=32,
+            type=argon2.Type.ID
+        )
 
     async def _derive_encryption_for_not_automatic(
             self, user_seed: Optional[str], interaction: discord.Interaction, user_id: int,
@@ -31,7 +52,8 @@ class EncryptionManager:
             self.log.info(f"Generated random seed for '{target_item_path}' for user {user_id}. Sent via DM.")
 
         derived_key = self.encryption._derive_key_from_seed(user_seed)
-        derived_hash = hashlib.sha256(user_seed.encode('utf-8')).hexdigest() if inherited_store_hash_flag else ""
+        # Argon2id hash for storage — includes salt and parameters in the string
+        derived_hash = self._ph.hash(user_seed) if inherited_store_hash_flag else ""
         return derived_key, derived_hash
 
     async def _resolve_target_item_for_new_version(
@@ -202,7 +224,7 @@ class EncryptionManager:
                         final_user_seed = user_seed
                     
                     final_encryption_key = self.encryption._derive_key_from_seed(final_user_seed)
-                    final_password_hash = hashlib.sha256(final_user_seed.encode()).hexdigest() if save_hash else ""
+                    final_password_hash = self._ph.hash(final_user_seed) if save_hash else ""
                     self.log.info(f"Derived NEW password key/hash for new version of '{target_base_filename}'.")
                 else:
                     # No new seed provided: attempt to inherit
@@ -264,7 +286,7 @@ class EncryptionManager:
 
                 final_encryption_key = self.encryption._derive_key_from_seed(final_user_seed)
                 if save_hash:
-                    final_password_hash = hashlib.sha256(final_user_seed.encode()).hexdigest()
+                    final_password_hash = self._ph.hash(final_user_seed)
             
             else: # off
                 final_encryption_key = None

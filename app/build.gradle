@@ -8,8 +8,8 @@ android {
         applicationId "com.vov.vaultopus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1-beta-2-release"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -25,14 +25,13 @@ android {
             buildPython "/usr/bin/python3.11"
             version "3.11"
             pip {
-                install "fastapi"
-                install "uvicorn"
-                install "websockets"
-                install "pydantic"
-                install "aiofiles"
-                install "discord.py"
-                install "aiohttp"
-                install "cryptography"
+                install "discord.py==2.4.0"
+                install "aiohttp==3.10.10"
+                install "fastapi==0.115.0"
+                install "uvicorn==0.32.0"
+                install "websockets==13.1"
+                install "cryptography==42.0.8"
+                install "argon2-cffi==25.1.0"
             }
         }
     }

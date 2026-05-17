@@ -1,0 +1,1 @@
+cp -r original_mobile_folder/dist/* app/src/main/assets/public/

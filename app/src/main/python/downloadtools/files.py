@@ -1,10 +1,23 @@
-#files.py
+#---------------------------------------------------------------------
+#files.py (for downloadtools) (ATRAHASIS) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
+#I HAD MADE THIS PROJECT FOR FREE FOR ALL
+#from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
+#this code will still be here so DO GOOD NO EVIL....good luck :)
+#---------------------------------------------------------------------
+#[]===================THE ENCODING FIX==========================[]
+from encoding_fix import apply as _fix_encoding
+_fix_encoding()
+#[]=================START OF ACTUAL CODE========================[]
 import os
 from typing import Optional, Tuple, Dict
 
 import discord
 from itertools import chain
 from cryptography.fernet import InvalidToken
+import argon2
+from argon2 import PasswordHasher
+
 try:
     from utils import _compute_file_paths
     from encrytion import denc
@@ -13,9 +26,11 @@ except Exception:
     from downloadtools.utils import _compute_file_paths
     from downloadtools.encrytion import denc
     from downloadtools.message_related import MRD
+
 class DecryptionCancelledError(Exception):
     """Raised when user cancels all downloads due to decryption failure."""
     pass
+
 class files:
     def __init__(self, log, version_manager, DDB, baseapi, bot):
         self.log = log
@@ -24,6 +39,15 @@ class files:
         self.bot = bot
         self.MRD = MRD(self.ba, self.log)
         self.denc = denc(log=self.log, ddb=DDB, version_manager=self.version_manager)
+        # Argon2id verifier — parameters must match upload side
+        self._ph = PasswordHasher(
+            time_cost=3,
+            memory_cost=65536,
+            parallelism=4,
+            hash_len=32,
+            type=argon2.Type.ID
+        )
+
     def get_channel(self, channel_id):
         """Wrapper for bot.get_channel"""
         return self.bot.get_channel(channel_id)
@@ -31,6 +55,7 @@ class files:
     async def fetch_channel(self, channel_id):
         """Wrapper for bot.fetch_channel"""
         return await self.bot.fetch_channel(channel_id)
+
     async def _collect_relevant_files(
             self,
             all_entries: list,
@@ -232,6 +257,7 @@ class files:
         total_parts = sum(fd['total_expected_parts'] for fd in files_grouped.values())
         self.log.debug(f"DEBUG: files_grouped count: {len(files_grouped)}")
         return files_grouped, total_parts
+
     async def _prepare_output_directories(
         self,
         interaction: discord.Interaction,download_folder,
@@ -282,10 +308,12 @@ class files:
             self.log.info(f"Calculated cleanup path for single file: '{output_path}'.")
 
         return local_cleanup_path
+
     async def determine_choice(self,strictness_mode:str):
         # returns True if the system should automatically remove incomplete data, False if user should be prompted
         if strictness_mode == 'HA': return True
         else: return False
+
     async def _return_info_to_download_Centre(self,strictness_mode:str, passed:bool, parts:int=0):
         #returned (if download got done correctly, numbers of downloaded parts, if should stop download immediately, if it should just remove downloaded data or give user choice to deal with data)
         if passed: return True, parts, False
@@ -293,6 +321,7 @@ class files:
             if strictness_mode == 'HA': return False, parts, True
             elif strictness_mode == 'SA': return False, parts, True
             else: return False, parts, False
+
     async def _download_single_file(
             self,
             interaction,
@@ -357,7 +386,6 @@ class files:
 
         # --- Upfront hash validation (for stored-hash mode) ---
         if encryption_key is not None and store_hash and password_seed_hash:
-            import hashlib
             # Check if current key/seed produces the correct hash
             current_seed = decryption_password_seed.get(item_key, '')
             if isinstance(current_seed, bytes):
@@ -366,29 +394,37 @@ class files:
                 except Exception:
                     current_seed = ''
             while current_seed:
-                provided_hash = hashlib.sha256(current_seed.encode('utf-8')).hexdigest()
-                if provided_hash == password_seed_hash:
+                try:
+                    # Argon2id verification — constant-time, handles salt/parameters internally
+                    self._ph.verify(password_seed_hash, current_seed)
                     break  # correct password, proceed
-                # Wrong hash - ask for correct one
-                self.log.warning(f"Stored-hash mismatch for {display_path}. Prompting for correct password.")
-                choice, new_seed = await self.denc._handle_decryption_failure(
-                    interaction, display_path, version, total_parts,
-                    user_mention, local_cleanup_path,
-                    overall_parts_downloaded, overall_total_parts
-                )
-                if choice == 'cancel_all':
-                    raise DecryptionCancelledError()
-                elif choice == 'cancel_keep':
-                    raise DecryptionCancelledError("User cancelled current download but kept files.")
-                elif choice == 'retry' and new_seed:
-                    current_seed = new_seed
-                    # Derive new key and update seed dict
-                    encryption_key = benc_inst._derive_key_from_seed(new_seed)
-                    decryption_password_seed[item_key] = new_seed
-                else:
-                    # continue = skip, or unknown choice
+                except argon2.exceptions.VerifyMismatchError:
+                    # Wrong hash - ask for correct one
+                    self.log.warning(f"Stored-hash mismatch for {display_path}. Prompting for correct password.")
+                    choice, new_seed = await self.denc._handle_decryption_failure(
+                        interaction, display_path, version, total_parts,
+                        user_mention, local_cleanup_path,
+                        overall_parts_downloaded, overall_total_parts
+                    )
+                    if choice == 'cancel_all':
+                        raise DecryptionCancelledError()
+                    elif choice == 'cancel_keep':
+                        raise DecryptionCancelledError("User cancelled current download but kept files.")
+                    elif choice == 'retry' and new_seed:
+                        current_seed = new_seed
+                        # Derive new key and update seed dict
+                        encryption_key = benc_inst._derive_key_from_seed(new_seed)
+                        decryption_password_seed[item_key] = new_seed
+                    else:
+                        # continue = skip, or unknown choice
+                        await interaction.send(
+                            content=f"{user_mention}, Skipping `{display_path} (v{version})` due to wrong password."
+                        )
+                        return await self._return_info_to_download_Centre(strictness_mode, False, total_parts)
+                except Exception as e:
+                    self.log.error(f"Argon2id verification error for {display_path}: {e}")
                     await interaction.send(
-                        content=f"{user_mention}, Skipping `{display_path} (v{version})` due to wrong password."
+                        content=f"{user_mention}, Error verifying password for `{display_path} (v{version})`: {e}"
                     )
                     return await self._return_info_to_download_Centre(strictness_mode, False, total_parts)
 

@@ -1,4 +1,14 @@
-# listfiles_parser.py - ID-Based Query Parser and Filter Engine
+#---------------------------------------------------------------------
+#listfiles_parser.py (satan) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
+#I HAD MADE THIS PROJECT FOR FREE FOR ALL
+#from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
+#this code will still be here so DO GOOD NO EVIL....good luck :)
+#---------------------------------------------------------------------
+#[]===================THE ENCODING FIX==========================[]
+from encoding_fix import apply as _fix_encoding
+_fix_encoding()
+#[]=================START OF ACTUAL CODE========================[]
 import re
 import fnmatch
 from datetime import datetime

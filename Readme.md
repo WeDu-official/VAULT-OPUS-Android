@@ -14,14 +14,19 @@
 
 Vault Opus Android is the native mobile implementation of the Infinity Cloud Storage Project. It leverages Capacitor and Chaquopy to run the powerful Vault Opus backend directly on your smartphone, giving you secure, unlimited storage on the go.
 
-### 📥 Installation
-1. Download the latest `app-debug.apk` from the releases or build artifacts.
+### 📥 Installation & Setup
+1. Download the latest `app-debug.apk`(in app/build/outputs/debug) or from the releases.
 2. Open the APK on your Android device.
-3. If prompted, allow installation from "Unknown Sources."
+3. If prompted, allow installation from "Unknown Sources." or permissions to allow access to all your files, allow it too
 4. Launch **VAULT OPUS** from your app drawer.
+5. make a discord bot with nessesary permissions(or just as admin if you wanna it faster) take it's token and save it
+6. make a discord server and at least a single text channel and take the channel id
+7. go to settings tab in VAULT OPUS and add the two and save settings
+8. go to volumes tab and hit on the add button and write name of new volume to make it, and then just open the volume
+9. DONE, just go to files tab and do whatever :)
 
 > [!TIP]
-> **Desktop User?** If you are looking for the Linux, Windows, or macOS version, please visit our dedicated desktop repository: **[VAULT-OPUS-Desktop](https://github.com/WeDu-official/VAULT-OPUS-Desktop)**.
+> **Desktop User?** If you are looking for the Linux, Windows or anyother via manual build, please visit our dedicated desktop repository: **[VAULT-OPUS-Desktop](https://github.com/WeDu-official/VAULT-OPUS-Desktop)**.
 
 ---
 
