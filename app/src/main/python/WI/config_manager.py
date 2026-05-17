@@ -92,14 +92,13 @@ def get_config(config_path: Optional[str] = None) -> ConfigManager:
     
     # If no path provided, determine default Android/Local path
     if not config_path:
-        if os.path.exists('/system/bin/app_process'):
-            try:
-                from java import jclass
-                Python = jclass('com.chaquo.python.Python')
-                context = Python.getPlatform().getApplication()
-                config_path = str(context.getFilesDir().getAbsolutePath() + "/config.json")
-            except: config_path = "config.json"
-        else: config_path = "config.json"
+        # Add parent dir to sys.path if needed
+        import sys
+        parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        from path_utils import get_config_path as _get_writable_config
+        config_path = _get_writable_config()
 
     if _config_instance is None or _config_instance.config_path.absolute() != Path(config_path).absolute():
         _config_instance = ConfigManager(config_path)

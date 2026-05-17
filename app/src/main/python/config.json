@@ -2,7 +2,8 @@
   "discord": {
     "token": "",
     "channel_id": "",
-    "command_prefix": "/"
+    "command_prefix": "/",
+    "request_pacing_delay": 0.5
   },
   "encryption": {
     "generate_if_missing": true

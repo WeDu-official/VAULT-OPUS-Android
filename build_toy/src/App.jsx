@@ -484,14 +484,10 @@ export default function App() {
           })
           .then(r => r.json())
           .then(vd => {
-            const versionSet = new Set();
             const vers = [];
             if (vd.results) {
               Object.values(vd.results).forEach(item => {
-                if (item.version && !versionSet.has(item.version)) {
-                  versionSet.add(item.version);
-                  vers.push(item.version);
-                }
+                if (item.version && !vers.includes(item.version)) vers.push(item.version);
               });
             }
             vers.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
@@ -672,12 +668,21 @@ export default function App() {
         })
         .then(r => r.json())
         .then(vd => {
-          const vers = [];
+          const versionData = [];
           if (vd.results) {
-            Object.values(vd.results).forEach(i => { if (i.version) vers.push(i.version); });
+            if (typeof vd.results === 'object' && !Array.isArray(vd.results)) {
+              const keys = Object.keys(vd.results);
+              if (keys.length > 0 && keys[0].includes('.')) {
+                keys.forEach(version => { if (version.includes('.')) versionData.push(version); });
+              } else {
+                Object.values(vd.results).forEach(item => {
+                  if (item.version && !versionData.includes(item.version)) versionData.push(item.version);
+                });
+              }
+            }
           }
-          vers.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
-          setVersions(vers);
+          versionData.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+          setVersions(versionData);
         })
         .catch(console.error)
         .finally(() => setLoading(false));
@@ -1024,16 +1029,16 @@ export default function App() {
         return;
       }
       localPaths.forEach(path => {
-        const enc = minimize && encryption === 'not_automatic' ? 'automatic' : encryption;
-        const args = ['upload', path, '-db', selectedDb, '-c', config?.discord?.channel_id || '', '--encryption_mode', enc];
-        if (enc === 'not_automatic' && finalPassword) args.push('--password_seed', finalPassword);
+        const effectiveEncryption = (minimize && encryption === 'not_automatic') ? 'automatic' : encryption;
+        const args = ['upload', path, '-db', selectedDb, '-c', config?.discord?.channel_id || '', '--encryption_mode', effectiveEncryption];
+        if (effectiveEncryption === 'not_automatic' && finalPassword) args.push('--password_seed', finalPassword);
         if (uploadName) args.push('--upload_name', uploadName);
         if (newVersionString) args.push('--new_version_string', newVersionString);
         if (strictness !== 'NA') args.push('--strictness_mode', strictness);
         if (chunkSize) args.push('--chunk_size_mb', chunkSize);
         if (minimize) args.push('--minimize', 'yes');
         if (!nameCheck) args.push('--no_name_check');
-        args.push('--save_hash', encryption === 'not_automatic' && zeroKnowledge ? 'False' : 'True');
+        args.push('--save_hash', effectiveEncryption === 'not_automatic' && zeroKnowledge ? 'False' : 'True');
         runCmd(args, path.split(/[/\\]/).pop(), 'upload');
       });
       setBottomSheet(null);
@@ -1257,8 +1262,9 @@ export default function App() {
     const [confirm, setConfirm] = useState('');
     const execute = async () => {
       try {
-        await fetch('/api/dbs/nuke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) });
-        showToast(`Volume ${db} has been wiped`, 'success');
+        const res = await fetch('/api/dbs/nuke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) });
+        const data = await res.json();
+        showToast(`Volume ${db} wiped. ${data.db_entries_deleted || 0} entries destroyed.`, 'success');
         setModal(null);
         if (selectedDb === db) fetchFiles('.');
       } catch (e) { showToast(e.message, 'error'); }

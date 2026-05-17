@@ -1,0 +1,28 @@
+{
+  "discord": {
+    "token": "",
+    "channel_id": "",
+    "command_prefix": "/",
+    "request_pacing_delay": 0.5
+  },
+  "encryption": {
+    "generate_if_missing": true
+  },
+  "upload": {
+    "max_concurrent": 3,
+    "chunk_size_mb": 8,
+    "max_retries": 15
+  },
+  "download": {
+    "max_concurrent": 3,
+    "max_retries": 15
+  },
+  "database": {
+    "default_extension": ".db",
+    "vacuum_on_startup": true
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+  }
+}

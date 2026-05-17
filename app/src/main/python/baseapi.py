@@ -26,9 +26,7 @@ class BASEapi:
     def __init__(self, bot: commands.Bot, log):
         self.bot = bot
         self.log = log
-        # Get config path relative to this file
-        src_dir = os.path.dirname(os.path.abspath(__file__))
-        self.config_path = os.path.join(src_dir, "config.json")
+        # Config is handled robustly by config_manager
 
     async def send_message_robustly(
             self,
@@ -169,7 +167,7 @@ class BASEapi:
                 # Success!
                 # Apply request pacing delay from config
                 try:
-                    config = get_config(self.config_path)._config
+                    config = get_config()._config
                     pacing_delay = config.get("discord", {}).get("request_pacing_delay", 0.5)
                 except:
                     pacing_delay = 0.5

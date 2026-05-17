@@ -74,7 +74,7 @@ class UPLOAD:
         if not await self.upmang._acquire_user_upload_slot(user_id, root_upload_name, interaction):
             return
 
-        all_entries = await self.db._db_read_sync(DB_FILE, {})
+        all_entries = await self.db._db_read_sync(DATABASE_FILE, {})
         print(all_entries)
         # Step 4: validate NEW UPLOAD ONLY
         if upload_mode == "new_upload":

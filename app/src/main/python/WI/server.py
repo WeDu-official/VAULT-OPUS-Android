@@ -12,6 +12,8 @@ VAULT_OPUS_SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..
 if VAULT_OPUS_SRC_DIR not in sys.path:
     sys.path.insert(0, VAULT_OPUS_SRC_DIR)
 
+from path_utils import ANDROID_WRITABLE_DIR, normalize_path
+
 # []===================THE ENCODING FIX==========================[]
 try:
     from encoding_fix import apply as _fix_encoding
@@ -42,16 +44,13 @@ logger = logging.getLogger("VAULT_OPUS_WebAPI")
 
 # Robust Android Path Detection
 is_android = os.path.exists('/system/bin/app_process') or 'ANDROID_ROOT' in os.environ
+WRITABLE_DIR = ANDROID_WRITABLE_DIR
 
 if is_android:
     try:
         from java import jclass
         Python = jclass('com.chaquo.python.Python')
         context = Python.getPlatform().getApplication()
-        WRITABLE_DIR = str(context.getFilesDir().getAbsolutePath())
-        
-        # Determine source dir (where assets are extracted)
-        VAULT_OPUS_SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         
         # Ensure config.json is copied or merged to WRITABLE_DIR
         _initial_config_path = os.path.join(WRITABLE_DIR, "config.json")
@@ -229,7 +228,15 @@ async def update_config(new_config: Dict[str, Any]):
     config_path = os.path.join(WRITABLE_DIR, "config.json")
     config_obj = get_config(config_path)
     config_obj._config = config_obj._deep_merge(config_obj._config, new_config)
-    config_obj._save_config()
+    try:
+        config_obj._save_config()
+    except PermissionError as e:
+        logger.error(f"Permission denied saving config: {e}")
+        raise HTTPException(status_code=403, detail=f"Permission denied: {str(e)}. Settings could not be saved to storage.")
+    except Exception as e:
+        logger.error(f"Failed to save config: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save config: {str(e)}")
+
     task_manager.refresh()
     return {"status": "success", "config": config_obj._config}
 
@@ -352,34 +359,82 @@ async def create_folder(request: dict):
 @app.post("/api/dbs/delete")
 async def delete_db_endpoint(request: dict):
     db_name = request.get("db_name")
+    if not db_name:
+        raise HTTPException(status_code=400, detail="Missing db_name")
+
+    logger.info(f"Deletion request received for: {db_name}")
     if not db_name.lower().endswith('.db'): db_name += '.db'
-    db_path = os.path.join(DB_DIR, db_name)
+
     try:
-        if os.path.exists(db_path): os.remove(db_path)
+        # 1. Resolve DB path
+        db_path = Path(volume_manager.DATABASES_DIR) / db_name
+        logger.info(f"Resolved DB path: {db_path} (Exists: {db_path.exists()})")
+
+        if db_path.exists():
+            try:
+                db_path.unlink()
+                logger.info(f"Successfully unlinked DB file: {db_path}")
+            except Exception as e:
+                logger.error(f"Failed to unlink DB file {db_path}: {e}")
+                raise Exception(f"File system error: {e}")
+        else:
+            logger.warning(f"DB file not found at expected path: {db_path}")
+
+        # 2. Delete sidecar config
         stem = Path(db_name).stem
-        cfg_path = os.path.join(WRITABLE_DIR, "VOLUMES_CONFIGS", f"{stem}_config.json")
-        if os.path.exists(cfg_path): os.remove(cfg_path)
-        return {"status": "success"}
+        config_path = Path(volume_manager.VOLUMES_CONFIGS_DIR) / f"{stem}_config.json"
+        logger.info(f"Resolved config path: {config_path} (Exists: {config_path.exists()})")
+
+        if config_path.exists():
+            config_path.unlink()
+            logger.info(f"Successfully unlinked config file: {config_path}")
+
+        return {"status": "success", "message": f"Volume '{db_name}' deleted."}
     except Exception as e:
-        logger.error(f"Error deleting volume: {e}")
+        logger.error(f"Error during volume deletion process: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dbs/nuke")
 async def nuke_db(payload: dict):
     db_name = payload.get("db_name")
-    if not db_name.lower().endswith('.db'): db_name += '.db'
+    if not db_name:
+        raise HTTPException(status_code=400, detail="Missing db_name")
+    if not db_name.lower().endswith('.db'):
+        db_name += '.db'
+
     db_path = os.path.join(DB_DIR, db_name)
+    if not os.path.exists(db_path):
+        raise HTTPException(status_code=404, detail=f"Database '{db_name}' not found")
+
     def _do_nuke():
         import sqlite3
-        conn = sqlite3.connect(db_path, isolation_level=None)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM file_metadata_table")
-        count = cursor.rowcount
-        conn.close()
-        return count
+        conn = None
+        try:
+            conn = sqlite3.connect(db_path, timeout=1.0, isolation_level=None)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='file_metadata_table'")
+            if not cursor.fetchone(): return 0
+            cursor.execute("SELECT COUNT(*) FROM file_metadata_table")
+            total = cursor.fetchone()[0]
+            if total == 0: return 0
+            cursor.execute("DELETE FROM file_metadata_table")
+            deleted = cursor.rowcount
+            try: cursor.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except: pass
+            return deleted
+        except sqlite3.OperationalError as e:
+            logger.error(f"[NUKE] Database locked: {e}")
+            raise RuntimeError(f"Database is locked by another connection: {e}")
+        finally:
+            if conn:
+                try: conn.close()
+                except: pass
+
     try:
         deleted = await asyncio.to_thread(_do_nuke)
-        return {"status": "success", "db_entries_deleted": deleted}
+        return {"status": "success", "db_entries_deleted": deleted, "message": f"Database '{db_name}' wiped. {deleted} entries destroyed."}
+    except RuntimeError as e:
+        raise HTTPException(status_code=423, detail=str(e))
     except Exception as e:
         logger.error(f"Error nuking DB: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -405,42 +460,79 @@ async def browse_directory(path: Optional[str] = Query(None)):
 
 @app.get("/api/listfiles")
 async def list_files_endpoint(db: str, path: str = ".", itemid: Optional[str] = None, version: Optional[str] = None):
+    if not db: return {"error": "Database not specified"}
     if not db.lower().endswith('.db'): db += '.db'
     db_path = os.path.join(DB_DIR, db)
     if not os.path.exists(db_path): return {"error": "Database not found"}
+    
     try:
         all_entries = await db_manager._db_read_sync(db_path, {})
+        if not all_entries: return {"query": {"target_path": path}, "results": {}}
+
         if itemid:
             this_item_entries = [e for e in all_entries if e.get("itemid") == itemid]
-            if not this_item_entries: return {"error": "Item not found"}
+            if not this_item_entries: return {"error": "Item not found", "results": {}}
+            
             ref_entry = this_item_entries[0]
+            ref_name = ref_entry.get("base_filename", "")
             root_id = ref_entry.get("root_upload_name", "")
             target_itemid = root_id if (root_id and len(root_id) == 33 and root_id[0].lower() in ('f', 'd')) else itemid
+            
             filtered_entries = [e for e in all_entries if e.get("itemid") == target_itemid or e.get("root_upload_name") == target_itemid]
+            
             versions = {}
             for entry in filtered_entries:
                 ver = entry.get("version", "unknown")
                 if ver not in versions: versions[ver] = []
                 versions[ver].append(entry)
+            
             sorted_versions = sorted(versions.items(), key=lambda x: max((e.get("upload_timestamp", "") for e in x[1]), default=""), reverse=True)
+            
             results = {}
             for ver, entries in sorted_versions:
-                rep = next((e for e in entries if e.get("itemid") == target_itemid), entries[0])
-                results[ver] = {
-                    "name": rep.get("base_filename"), "version": ver, "itemid": rep.get("itemid"), 
-                    "upload_timestamp": rep.get("upload_timestamp"), "total_parts": rep.get("total_parts", 0),
-                    "encryption_mode": rep.get("encryption_mode", "off")
+                rep = next((e for e in entries if e.get("itemid") == target_itemid), None)
+                if not rep: rep = next((e for e in entries if e.get("base_filename") == ref_name), entries[0])
+                
+                key = f"{rep.get('root_upload_name', '')}/{rep.get('relative_path_in_archive', '')}/{rep.get('base_filename', '')}".strip('/')
+                if not key: key = rep.get("base_filename", "unknown")
+                
+                results[key] = {
+                    "name": rep.get("base_filename", "unknown"),
+                    "db_name": rep.get("root_upload_name", ""),
+                    "type": "folder" if rep.get("itemid", "").lower().startswith('d') else "file",
+                    "version": ver, "itemid": rep.get("itemid"),
+                    "total_parts": rep.get("total_parts", 0),
+                    "upload_timestamp": rep.get("upload_timestamp", ""),
+                    "encryption_mode": rep.get("encryption_mode", "off"),
+                    "contents": {e.get("relative_path_in_archive", e.get("base_filename", "")): {
+                        "name": e.get("base_filename", "unknown"),
+                        "type": "folder" if e.get("itemid", "").lower().startswith('d') else "file",
+                        "version": ver, "itemid": e.get("itemid"),
+                        "total_parts": e.get("total_parts", 0),
+                        "upload_timestamp": e.get("upload_timestamp", ""),
+                        "encryption_mode": e.get("encryption_mode", "off"),
+                    } for e in entries if e.get("itemid") != rep.get("itemid")}
                 }
-            return {"results": results}
+            return {"query": {"itemid": itemid, "resolved_root": target_itemid}, "results": results, "stats": {"total_items": len(filtered_entries), "total_versions": len(versions)}}
 
-        query_parts = [path, "-f", "nested", "idshow=no", "depth=1"]
+        query_parts = [path, "-f", "nested", "idshow=no", "showoriginal=no", "depth=1"]
         if version: query_parts.extend(["version="+version, "all_versions=yes"])
         query = parser.parse(" ".join(query_parts))
+        
         resolved_path_info = await db_manager._resolve_human_path_to_db_entry_keys(path, all_entries) if path != "." else None
+        if path != "." and not resolved_path_info: return {"error": f"Path '{path}' not found", "results": {}}
+
         from listfiles_tools.listfiles_parser import ListFilesFilter
         filter_engine = ListFilesFilter(versioning_manager=versioning_manager, log=logger)
         filtered_entries = filter_engine.apply_filters(all_entries, query, resolved_path_info)
         forests = tree_builder.build_tree(filtered_entries, query, root_path=path)
+        
+        if resolved_path_info:
+            target_id = resolved_path_info[4]
+            for root_id, root_node in forests.items():
+                target_node = tree_builder._find_node_by_id(root_node, target_id)
+                if target_node: forests = {target_id: target_node}; break
+
         return formatter.format_output(forests, query, include_stats=True)
     except Exception as e:
         logger.error(f"Error listing files: {e}")

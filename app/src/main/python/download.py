@@ -112,8 +112,8 @@ class DownloadContext:
                 return
 
             if not os.path.isabs(download_folder):
-                project_src = os.path.dirname(os.path.abspath(__file__))
-                download_folder = os.path.join(project_src, download_folder)
+                from path_utils import normalize_path as _norm
+                download_folder = _norm(download_folder)
             
             base_download_dir = os.path.abspath(os.path.normpath(download_folder))
             os.makedirs(base_download_dir, exist_ok=True)

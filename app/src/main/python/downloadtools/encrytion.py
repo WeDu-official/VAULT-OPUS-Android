@@ -38,11 +38,18 @@ class denc:
 
     def initialize_for_volume(self, db_path: str):
         """Initializes salt and info for the specific volume database."""
+        import sys
+        import os
+        parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+
         from config_manager import get_salt, get_info
-        self.db_path = db_path
+        from path_utils import get_db_path
+        self.db_path = get_db_path(db_path)
         try:
-            self.salt = get_salt(db_path)
-            self.info = get_info(db_path)
+            self.salt = get_salt(self.db_path)
+            self.info = get_info(self.db_path)
         except Exception as e:
             self.log.warning(f"Could not load encryption config for {db_path}: {e}")
 

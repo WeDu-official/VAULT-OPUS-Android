@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --color-primary: #3bb5ff;
+  --color-primary-hover: #006fbe;
+  --color-primary-glow: rgba(59, 181, 255, 0.25);
+  --color-surface: #0a1628;
+  --color-surface-hover: #0f1f3a;
+  --color-background: #060d1a;
+  --color-border: #1a3a5c;
+}
+
+html, body {
+  @apply bg-[#060d1a] text-gray-100 font-sans antialiased;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+}
+
+#root {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bottom safe area for iOS */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Top safe area for iOS */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-[#1a3a5c] rounded-full; }
+
+/* Touch feedback */
+.btn-touch {
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.1s ease;
+}
+.btn-touch:active {
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+/* Bottom sheet animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes slideDown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sheet-enter { animation: slideUp 0.25s ease-out; }
+.sheet-exit { animation: slideDown 0.2s ease-in; }
+.overlay-enter { animation: fadeIn 0.2s ease-out; }
+
+/* Grid for files */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.file-grid .file-item {
+  aspect-ratio: 4/3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid #1a3a5c;
+  background: #0a1628;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.file-grid .file-item:active {
+  transform: scale(0.96);
+}
+.file-grid .file-item.selected {
+  background: rgba(59, 181, 255, 0.1);
+  border-color: #3bb5ff;
+  box-shadow: 0 0 12px rgba(59, 181, 255, 0.15);
+}
+
+/* Touch-friendly inputs */
+input, select, textarea, button {
+  font-size: 16px !important; /* Prevents iOS zoom on focus */
+}
+
+/* Modal overlay */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.15s ease-out;
+}
