@@ -25,6 +25,8 @@ Vault Opus Android is the native mobile implementation of the Infinity Cloud Sto
 8. go to volumes tab and hit on the add button and write name of new volume to make it, and then just open the volume
 9. DONE, just go to files tab and do whatever :)
 
+IF YOU GOT ANY INSTALLATION ISSUES OR QUESTIONS EVEN IF SIMPLE CONTACT [ME](mailto:fplu.the.founder@gmail.com) OR JOIN OUR [DISCORD SERVER](https://discord.gg/mnduzx6yUg)
+
 > [!TIP]
 > **Desktop User?** If you are looking for the Linux, Windows or anyother via manual build, please visit our dedicated desktop repository: **[VAULT-OPUS-Desktop](https://github.com/WeDu-official/VAULT-OPUS-Desktop)**.
 
