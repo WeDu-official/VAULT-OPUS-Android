@@ -12,7 +12,7 @@
 
 ## 📱 Mobile App (Android)
 
-Vault Opus Android is the native mobile implementation of the Infinity Cloud Storage Project. It leverages Capacitor and Chaquopy to run the powerful Vault Opus backend directly on your smartphone, giving you secure, unlimited storage on the go.
+Vault Opus Android is the native mobile implementation of the Infinity Cloud Storage Project. utilizing discord CDN to give you secure, unlimited storage on the go.
 
 ### 📥 Installation & Setup
 1. Download the latest `app-debug.apk`(in app/build/outputs/debug) or from the releases.
