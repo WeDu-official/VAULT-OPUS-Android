@@ -1,0 +1,2 @@
+    npx cap copy
+    

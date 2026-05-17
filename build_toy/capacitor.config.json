@@ -1,0 +1,8 @@
+{
+  "appId": "com.vov.vaultopus",
+  "appName": "Vault Opus",
+  "webDir": "../app/src/main/assets/public",
+  "server": {
+    "androidScheme": "http"
+  }
+}
