@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#upload_manager.py (Barachiel) from the VAULT OPUS PROJECT version 1-beta-2-release
+#upload_manager.py (Barachiel) from the VAULT OPUS PROJECT version 1-beta-release-5
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -95,7 +95,8 @@ class UploadManager:
                              parent_id: Optional[str] = None,
                              human_rel_path: Optional[str] = None,
                              human_root_name: Optional[str] = None,
-                             minimize: str = "no"):
+                             minimize: str = "no",
+                             is_new_upload: bool = True):
     
         user_mention = interaction.user_mention
         
@@ -111,9 +112,11 @@ class UploadManager:
         # For new uploads, is_top_level_single_file_upload means it has no parent root ID.
         
         self.log.info(f"DEBUG: upload_single_file called for '{file_path}' with human_root_name='{human_root_name}', human_rel_path='{human_rel_path}'")
-        final_base, original_base, is_base_nicknamed = self.utils._resolve_file_nickname(
+        final_base, original_base, is_base_nicknamed = await self.utils._resolve_file_nickname(
             file_path, root_upload_name, is_top_level_single_file_upload,
-            is_nicknamed_flag_for_db
+            is_nicknamed_flag_for_db,
+            db_file=DB_FILE, parent_id=db_parent_id,
+            is_new_upload=is_new_upload
         )
 
         display_path = self.utils._compute_display_path(
@@ -299,11 +302,12 @@ class UploadManager:
                            is_nicknamed_flag: bool = False,
                            encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
                            password_seed_hash: str = "", store_hash_flag: bool = True,
-                           current_chunk_size: int = 0, version: str = "0.0.0.1", 
+                           current_chunk_size: int = 0, version: str = "0.0.0.1",
                            usrinput: bool = False, strictness_mode: str = "NA",
                            root_itemid: str = "",
                            human_root_name: Optional[str] = None,
-                           minimize: str = "no"):
+                           minimize: str = "no",
+                           is_new_upload: bool = True):
         passed = True
         folder_info_map = {"": root_itemid}
         
@@ -330,7 +334,8 @@ class UploadManager:
                     password_seed_hash=password_seed_hash,
                     store_hash_flag=store_hash_flag,
                     version=version,
-                    itemid=folder_id
+                    itemid=folder_id,
+                    is_new_upload=is_new_upload
                 )
                 
                 child_rel_name_path = os.path.join(relative_folder_path, dir_name).replace(os.path.sep, '/')
@@ -375,7 +380,8 @@ class UploadManager:
                                  current_chunk_size: int = 0, version: str = "0.0.0.1",
                                  usrinput: bool = False, strictness_mode: str = "NA",
                                  itemid: Optional[str] = None, parent_id: Optional[str] = None,
-                                 root_id: Optional[str] = None, minimize: str = "no"):
+                                 root_id: Optional[str] = None, minimize: str = "no",
+                                 is_new_upload: bool = True):
         user_mention = interaction.user_mention
         total_files = sum(len(f) for _, _, f in os.walk(local_folder_path))
         
@@ -427,7 +433,8 @@ class UploadManager:
             strictness_mode=strictness_mode,
             root_itemid=root_itemid,
             human_root_name=root_upload_name,
-            minimize=minimize
+            minimize=minimize,
+            is_new_upload=is_new_upload
         )
         
         if strictness_mode == "HA" and not fully_uploaded:
@@ -467,8 +474,9 @@ class UploadManager:
             folder_results = [e for e in folder_results_raw if (e.get('itemid') or '').lower().startswith('d')]
 
             for f in folder_results:
-                display = f.get('original_base_filename') or f.get('base_filename') or ''
-                if display == name:
+                db_name = f.get('base_filename', '')
+                db_original = f.get('original_base_filename', '')
+                if name == db_name or name == db_original:
                     return True
             
             # Top-level files
@@ -479,8 +487,9 @@ class UploadManager:
             file_results = [e for e in file_results_raw if (e.get('itemid') or '').lower().startswith('f')]
 
             for f in file_results:
-                display = f.get('original_base_filename') or f.get('base_filename') or ''
-                if display == name:
+                db_name = f.get('base_filename', '')
+                db_original = f.get('original_base_filename', '')
+                if name == db_name or name == db_original:
                     return True
             return False
 
@@ -510,12 +519,14 @@ class UploadManager:
                     return self.encry._generate_random_nickname_seed(), effective_root_name, True
 
                 if custom_root_name != effective_root_name:
-                    # Manual nickname: fail if duplicate
-                    if await _display_name_exists(custom_root_name):
-                        await interaction.send(
-                            f"{user_mention}, Error: The name '{custom_root_name}' already exists."
-                        )
-                        raise ValueError(f"Name '{custom_root_name}' already exists")
+                    # Manual nickname
+                    if name_check:
+                        while await _display_name_exists(custom_root_name):
+                            custom_root_name = await interaction.prompt_input(
+                                f"Name '{custom_root_name}' already exists. Please enter a new, unique nickname:"
+                            )
+                            if not custom_root_name:
+                                custom_root_name = await interaction.prompt_input("Nickname cannot be empty. Please enter a valid nickname:")
                     return custom_root_name, effective_root_name, True
 
                 # Same as original name: auto-suffix if duplicate

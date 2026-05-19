@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#upload.py (MICAEL) from the VAULT OPUS PROJECT version 1-beta-2-release
+#upload.py (MICAEL) from the VAULT OPUS PROJECT version 1-beta-release-5
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -84,7 +84,8 @@ class UPLOAD:
                     root_upload_name=root_upload_name,
                     version=new_version_string,
                     is_manual_nickname=is_nicknamed_flag_for_db,
-                    forced_length_limit=60
+                    forced_length_limit=60,
+                    name_check=name_check
                 )
             except ValueError as e:
                 await interaction.send(str(e), ephemeral=False)
@@ -175,7 +176,8 @@ class UPLOAD:
                     version=current_version_for_upload,usrinput=usrinput,strictness_mode=strictness_mode,
                     itemid=resolved_itemid, parent_id=resolved_parent_id,
                     root_id=resolved_root_id,
-                    minimize=minimize
+                    minimize=minimize,
+                    is_new_upload=(upload_mode == "new_upload")
                 )
             else:
                 not_kill = await self.upmang.upload_single_file(
@@ -197,7 +199,8 @@ class UPLOAD:
                     version=current_version_for_upload,usrinput=usrinput,strictness_mode=strictness_mode,
                     itemid=resolved_itemid, root_id=resolved_root_id, parent_id=resolved_parent_id,
                     human_root_name=root_upload_name,
-                    minimize=minimize
+                    minimize=minimize,
+                    is_new_upload=(upload_mode == "new_upload")
                 )
             if not not_kill:
                 await self.upmang._handle_incomplete_upload(

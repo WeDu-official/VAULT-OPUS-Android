@@ -1,9 +1,6 @@
 #---------------------------------------------------------------------
-#volume_manager.py (Karubbiyyun) from the VAULT OPUS PROJECT version 1-beta-2-release
+#volume_manager.py (Karubbiyyun) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
-#I HAD MADE THIS PROJECT FOR FREE FOR ALL
-#from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
-#this code will still be here so DO GOOD NO EVIL....good luck :)
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
 try:
@@ -14,6 +11,7 @@ except Exception:
 #[]=================START OF ACTUAL CODE========================[]
 import os
 import sys
+import re
 import json
 import base64
 import secrets
@@ -30,41 +28,44 @@ SRC_DIR = Path(ANDROID_WRITABLE_DIR)
 
 VOLUMES_CONFIGS_DIR = SRC_DIR / "VOLUMES_CONFIGS"
 DATABASES_DIR = SRC_DIR / "DATABASES"
-SHARABLES_DIR = SRC_DIR / "SHARABLES"
-HARDCODED_INFO = "VAULTOPUS-item-encryption-key"
+
+# Sharables in public Documents for easy access/sharing
+is_android = os.path.exists('/system/bin/app_process') or 'ANDROID_ROOT' in os.environ
+if is_android:
+    SHARABLES_DIR = Path("/storage/emulated/0/Documents/SHARABLES")
+else:
+    SHARABLES_DIR = SRC_DIR / "SHARABLES"
+
+HARDCODED_INFO = "VAULT_OPUS_V1"
 
 def ensure_dirs():
-    """Ensure all required directories exist."""
+    """Ensure essential volume directories exist."""
     VOLUMES_CONFIGS_DIR.mkdir(parents=True, exist_ok=True)
     DATABASES_DIR.mkdir(parents=True, exist_ok=True)
     SHARABLES_DIR.mkdir(parents=True, exist_ok=True)
 
 def validate_volume_name(name: str) -> str:
-    """
-    Validates the volume name. 
-    Rejects exactly '.db'. 
-    Strips '.db' suffix for the stem.
-    Ensures only the filename stem is returned, even if a path is provided.
-    """
-    path_obj = Path(name.strip())
-    clean_name = path_obj.name
+    """Validates and returns the base name of a volume."""
+    if not name:
+        raise ValueError("Volume name cannot be empty")
     
-    if clean_name.lower() == ".db":
-        raise ValueError("Invalid volume name: '.db' is not allowed.")
+    # Remove extension if provided
+    stem = Path(name).stem
     
-    if clean_name.lower().endswith(".db"):
-        return clean_name[:-3]
-    return clean_name
+    # Check for invalid characters
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', stem):
+        raise ValueError("Invalid volume name. Use only letters, numbers, underscores, dots, and hyphens.")
+    
+    return stem
 
-def get_config_path(volume_stem: str) -> Path:
-    """Returns the path to the volume's config file."""
-    return VOLUMES_CONFIGS_DIR / f"{volume_stem}_config.json"
+def get_config_path(stem: str) -> Path:
+    """Returns the path to a volume's configuration file."""
+    return VOLUMES_CONFIGS_DIR / f"{stem}_config.json"
 
-def create_volume_config(volume_name: str) -> Path:
-    """
-    Creates a new volume config with a random 32-byte salt.
-    """
+def create_volume_config(volume_name: str):
+    """Creates a default configuration for a volume if it doesn't exist."""
     ensure_dirs()
+    import re
     stem = validate_volume_name(volume_name)
     cfg_path = get_config_path(stem)
     
@@ -73,18 +74,16 @@ def create_volume_config(volume_name: str) -> Path:
     
     config = {
         "salt": salt,
-        "info": HARDCODED_INFO
+        "info": HARDCODED_INFO,
+        "created_at": datetime.now().isoformat()
     }
     
-    with open(cfg_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2)
-    
-    return cfg_path
+    if not cfg_path.exists():
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4)
 
-def rename_volume_config(old_name: str, new_name: str) -> Optional[Path]:
-    """
-    Renames a volume config sidecar to match a new volume name.
-    """
+def rename_volume_config(old_name: str, new_name: str):
+    """Renames a volume's configuration file."""
     old_stem = validate_volume_name(old_name)
     new_stem = validate_volume_name(new_name)
     
@@ -92,15 +91,12 @@ def rename_volume_config(old_name: str, new_name: str) -> Optional[Path]:
     new_cfg = get_config_path(new_stem)
     
     if old_cfg.exists():
-        old_cfg.rename(new_cfg)
-        return new_cfg
-    return None
+        os.rename(old_cfg, new_cfg)
 
-def get_volume_salt_info(db_path: str) -> Tuple[bytes, bytes]:
-    """
-    Retrieves the salt and info for a given database path.
-    """
-    stem = Path(db_path).stem
+def get_volume_security_params(volume_name: str) -> Tuple[bytes, bytes]:
+    """Retrieves the salt and info bytes for a volume."""
+    import re
+    stem = validate_volume_name(volume_name)
     cfg_path = get_config_path(stem)
     
     if not cfg_path.exists():
@@ -122,6 +118,7 @@ def make_package(volume_name: str) -> str:
     Returns the string path of the created package.
     """
     ensure_dirs()
+    import re
     stem = validate_volume_name(volume_name)
     
     if os.path.isabs(volume_name):
@@ -134,15 +131,15 @@ def make_package(volume_name: str) -> str:
     if not db_path.exists():
         raise FileNotFoundError(f"Database file not found: {db_path}")
     if not cfg_path.exists():
-        raise FileNotFoundError(f"Config file not found: {cfg_path}")
-    
+        create_volume_config(stem)
+        
     vov_filename = f"{stem}.vov"
     vov_path = SHARABLES_DIR / vov_filename
     
     if vov_path.exists():
         timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
         vov_path = SHARABLES_DIR / f"{stem}_{timestamp}.vov"
-    
+
     with zipfile.ZipFile(vov_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipf.write(db_path, arcname=f"{stem}.db")
         zipf.write(cfg_path, arcname=f"{stem}_config.json")
@@ -151,47 +148,45 @@ def make_package(volume_name: str) -> str:
 
 def open_package(vov_path_str: str) -> Tuple[str, str]:
     """
-    Unzips a .vov file and imports the volume and config.
-    Handles collisions with timestamp suffix.
+    Opens a .vov package and imports the volume and config.
+    Returns (db_path, config_path).
     """
     ensure_dirs()
     vov_path = Path(vov_path_str)
     if not vov_path.exists():
-        raise FileNotFoundError(f"Package not found: {vov_path}")
-    
+        raise FileNotFoundError(f"VOV package not found: {vov_path}")
+
     with zipfile.ZipFile(vov_path, 'r') as zipf:
-        namelist = zipf.namelist()
-        db_file = next((f for f in namelist if f.endswith(".db")), None)
-        cfg_file = next((f for f in namelist if f.endswith("_config.json")), None)
+        file_list = zipf.namelist()
+        
+        db_file = next((f for f in file_list if f.endswith('.db')), None)
+        cfg_file = next((f for f in file_list if f.endswith('_config.json')), None)
         
         if not db_file or not cfg_file:
-            raise ValueError("Invalid .vov package: Missing .db or _config.json")
+            raise ValueError("Invalid VOV package: missing .db or _config.json")
+            
+        stem = Path(db_file).stem
+        target_db = DATABASES_DIR / f"{stem}.db"
+        target_cfg = VOLUMES_CONFIGS_DIR / f"{stem}_config.json"
         
-        original_stem = Path(db_file).stem
-        target_stem = original_stem
-        
-        db_target = DATABASES_DIR / f"{target_stem}.db"
-        cfg_target = VOLUMES_CONFIGS_DIR / f"{target_stem}_config.json"
-        
-        # Collision Handling for imported files
-        if db_target.exists() or cfg_target.exists():
+        # Collision handling for import
+        if target_db.exists() or target_cfg.exists():
             timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-            target_stem = f"{original_stem}_{timestamp}"
-            db_target = DATABASES_DIR / f"{target_stem}.db"
-            cfg_target = VOLUMES_CONFIGS_DIR / f"{target_stem}_config.json"
-        
-        # Extract and rename if necessary
-        with open(db_target, "wb") as f:
+            target_db = DATABASES_DIR / f"{stem}_{timestamp}.db"
+            target_cfg = VOLUMES_CONFIGS_DIR / f"{stem}_{timestamp}_config.json"
+
+        # Extract files
+        with open(target_db, 'wb') as f:
             f.write(zipf.read(db_file))
-        
-        with open(cfg_target, "wb") as f:
+        with open(target_cfg, 'wb') as f:
             f.write(zipf.read(cfg_file))
             
-    return str(db_target), str(cfg_target)
+        return str(target_db), str(target_cfg)
 
 def open_explorer_for_sharables(path_str: Optional[str] = None) -> bool:
     """
-    Opens the OS file explorer at the SHARABLES directory or a specific path.
+    Opens the OS file explorer pointing to the sharables folder or a specific path.
+    Optimized for Android using FileProvider.
     """
     target_path = path_str if path_str else str(SHARABLES_DIR)
     path = os.path.abspath(target_path)

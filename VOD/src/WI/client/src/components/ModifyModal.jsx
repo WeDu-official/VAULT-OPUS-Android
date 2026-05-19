@@ -1,4 +1,5 @@
-//ModifyModal.jsx
+// ModifyModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 import ArchiveFolderPicker from './ArchiveFolderPicker';
 
@@ -62,9 +63,9 @@ export default function ModifyModal({ type, item, onConfirm, onCancel, selectedD
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Target Destination</label>
                 <div className="max-h-[300px] overflow-hidden border border-[#1a3a5c] rounded-lg bg-[#060d1a]">
-                   <ArchiveFolderPicker 
-                    selectedDb={selectedDb} 
-                    onSelect={(path) => setDestination(path)} 
+                  <ArchiveFolderPicker
+                    selectedDb={selectedDb}
+                    onSelect={(path) => setDestination(path)}
                     initialPath={destination}
                   />
                 </div>
@@ -128,11 +129,10 @@ export default function ModifyModal({ type, item, onConfirm, onCancel, selectedD
                       key={mode.id}
                       type="button"
                       onClick={() => setNameMode(mode.id)}
-                      className={`p-3 text-left rounded-lg border transition-all duration-150 ${
-                        nameMode === mode.id
-                          ? 'bg-[#3bb5ff]/10 border-[#3bb5ff] text-white shadow-[0_0_10px_rgba(59,181,255,0.1)]'
-                          : 'bg-[#0f1f3a] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                      }`}
+                      className={`p-3 text-left rounded-lg border transition-all duration-150 ${nameMode === mode.id
+                        ? 'bg-[#3bb5ff]/10 border-[#3bb5ff] text-white shadow-[0_0_10px_rgba(59,181,255,0.1)]'
+                        : 'bg-[#0f1f3a] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                        }`}
                     >
                       <div className="text-sm font-bold">{mode.label}</div>
                       <div className="text-[10px] opacity-60 leading-tight">{mode.desc}</div>

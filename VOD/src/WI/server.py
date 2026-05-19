@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-2-release
+#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release-5
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -180,6 +180,149 @@ async def update_config(new_config: Dict[str, Any]):
     task_manager.refresh()
     return {"status": "success", "config": config._config}
 
+RECENT_VOLUMES_FILE = os.path.join(VAULT_OPUS_SRC_DIR, "recent_volumes.json")
+
+def get_recent_volumes() -> List[str]:
+    if not os.path.exists(RECENT_VOLUMES_FILE):
+        return []
+    try:
+        with open(RECENT_VOLUMES_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_recent_volumes(recent: List[str]):
+    try:
+        with open(RECENT_VOLUMES_FILE, "w") as f:
+            json.dump(recent, f, indent=4)
+    except Exception as e:
+        logger.error(f"Failed to save recent volumes: {e}")
+
+@app.get("/api/recent_volumes")
+async def get_recent_volumes_endpoint():
+    return {"recent": get_recent_volumes()}
+
+@app.post("/api/recent_volumes")
+async def save_recent_volumes_endpoint(payload: Dict[str, Any]):
+    recent = payload.get("recent", [])
+    save_recent_volumes(recent)
+    return {"status": "success", "recent": recent}
+
+SETUP_FILE = os.path.join(VAULT_OPUS_SRC_DIR, "setup_complete.txt")
+
+def is_setup_complete() -> int:
+    if not os.path.exists(SETUP_FILE):
+        return 0
+    try:
+        with open(SETUP_FILE, "r") as f:
+            return int(f.read().strip())
+    except:
+        return 0
+
+@app.get("/api/setup_status")
+async def get_setup_status():
+    config = get_config(os.path.join(VAULT_OPUS_SRC_DIR, "config.json"))
+    token = config._config.get("discord", {}).get("token", "")
+    has_valid_token = bool(token and "placeholder" not in token.lower())
+
+    channel_id = str(config._config.get("discord", {}).get("channel_id", ""))
+    has_valid_channel = bool(channel_id and "placeholder" not in channel_id.lower())
+
+    has_valid_volume = False
+    db_dir = os.path.join(VAULT_OPUS_SRC_DIR, "DATABASES")
+    config_dir = os.path.join(VAULT_OPUS_SRC_DIR, "VOLUMES_CONFIGS")
+    if os.path.exists(db_dir):
+        for f in os.listdir(db_dir):
+            if f.endswith(".db"):
+                stem = f[:-3]
+                cfg_path = os.path.join(config_dir, f"{stem}_config.json")
+                if os.path.exists(cfg_path):
+                    has_valid_volume = True
+                    break
+
+    current_status = is_setup_complete()
+    if has_valid_token and has_valid_channel and has_valid_volume and current_status == 0:
+        with open(SETUP_FILE, "w") as f:
+            f.write("1")
+        current_status = 1
+
+    return {
+        "setup_complete": current_status,
+        "has_valid_token": has_valid_token,
+        "has_valid_channel": has_valid_channel,
+        "has_valid_volume": has_valid_volume
+    }
+
+@app.post("/api/setup")
+async def perform_setup(payload: Dict[str, Any]):
+    config = get_config(os.path.join(VAULT_OPUS_SRC_DIR, "config.json"))
+    
+    token = payload.get("token")
+    channel_id = payload.get("channel_id")
+    db_name = payload.get("db_name")
+    
+    existing_token = config._config.get("discord", {}).get("token", "")
+    has_valid_token = bool(existing_token and "placeholder" not in existing_token.lower())
+    
+    if not has_valid_token:
+        if not token:
+            raise HTTPException(status_code=400, detail="Discord Token is required")
+        config._config["discord"]["token"] = token
+        
+    existing_channel = str(config._config.get("discord", {}).get("channel_id", ""))
+    has_valid_channel = bool(existing_channel and "placeholder" not in existing_channel.lower())
+    
+    if not has_valid_channel:
+        if not channel_id:
+            raise HTTPException(status_code=400, detail="Discord Channel ID is required")
+        config._config["discord"]["channel_id"] = channel_id
+        
+    config._save_config()
+    
+    has_valid_volume = False
+    db_dir = os.path.join(VAULT_OPUS_SRC_DIR, "DATABASES")
+    config_dir = os.path.join(VAULT_OPUS_SRC_DIR, "VOLUMES_CONFIGS")
+    first_existing_db = None
+    if os.path.exists(db_dir):
+        for f in os.listdir(db_dir):
+            if f.endswith(".db"):
+                stem = f[:-3]
+                cfg_path = os.path.join(config_dir, f"{stem}_config.json")
+                if os.path.exists(cfg_path):
+                    has_valid_volume = True
+                    first_existing_db = f
+                    break
+                    
+    if not has_valid_volume:
+        if not db_name:
+            raise HTTPException(status_code=400, detail="Volume Name is required")
+        try:
+            stem = volume_manager.validate_volume_name(db_name)
+            db_name = stem + ".db"
+            if not regexa.match(r'^[a-zA-Z0-9_.-]+$', db_name):
+                raise ValueError()
+            
+            db_path = os.path.join(DB_DIR, db_name)
+            if not os.path.exists(db_path):
+                dummy_entry = {col: None for col in file_table_columns}
+                await db_manager._db_insert_sync(db_path, dummy_entry)
+                await db_manager._db_delete_sync(db_path, [{"base_filename": ""}])
+                volume_manager.create_volume_config(db_name)
+                
+                recent = get_recent_volumes()
+                if db_name not in recent:
+                    recent.insert(0, db_name)
+                    save_recent_volumes(recent)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to create volume: {str(e)}")
+    else:
+        db_name = first_existing_db
+        
+    with open(SETUP_FILE, "w") as f:
+        f.write("1")
+        
+    return {"status": "success", "db_name": db_name}
+
 @app.post("/api/dbs/create")
 async def create_db(db_name: str = Body(..., embed=True)):
     """
@@ -203,13 +346,7 @@ async def create_db(db_name: str = Body(..., embed=True)):
     try:
         # Create the database with the proper schema using DatabaseManager
         # Simply inserting a dummy entry will trigger table creation via _sync_create_table_if_not_exists
-        dummy_entry = {col: "" for col in file_table_columns}
-        # Set required integer fields to 0
-        for col in ["part_number", "total_parts", "message_id", "channel_id"]:
-            dummy_entry[col] = 0
-        for col in ["is_nicknamed", "is_base_filename_nicknamed", "store_hash_flag"]:
-            dummy_entry[col] = 0
-        dummy_entry["encryption_key_auto"] = b""
+        dummy_entry = {col: None for col in file_table_columns}
 
         await db_manager._db_insert_sync(db_path, dummy_entry)
 

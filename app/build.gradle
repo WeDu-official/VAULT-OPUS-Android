@@ -9,7 +9,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3
-        versionName "1-beta-3-release"
+        versionName "1-beta-release-4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -32,6 +32,10 @@ android {
                 install "websockets==13.1"
                 install "cryptography==42.0.8"
                 install "argon2-cffi==25.1.0"
+                install "pydantic==1.10.26"
+                install "typing-extensions==4.15.0"
+                install "anyio==4.13.0"
+                install "starlette==0.38.6"
             }
         }
     }

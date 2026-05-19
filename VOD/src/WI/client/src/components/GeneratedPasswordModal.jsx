@@ -1,4 +1,5 @@
-//GeneratedPasswordModal.jsx
+// GeneratedPasswordModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 import { Copy, Check, ShieldAlert } from 'lucide-react';
 
@@ -18,11 +19,11 @@ const GeneratedPasswordModal = ({ password, onConfirm, onCancel }) => {
           <div className="mx-auto w-16 h-16 bg-[#3bb5ff]/10 rounded-full flex items-center justify-center mb-2">
             <ShieldAlert size={32} className="text-[#3bb5ff]" />
           </div>
-          
+
           <h2 className="text-xl font-bold text-white tracking-tight">Save Your Password</h2>
-          
+
           <p className="text-gray-400 text-sm leading-relaxed">
-            A random password has been generated for your zero-knowledge encryption. 
+            A random password has been generated for your zero-knowledge encryption.
             <span className="text-[#3bb5ff] font-semibold block mt-1">
               You MUST save this password now. It cannot be recovered later.
             </span>
@@ -32,7 +33,7 @@ const GeneratedPasswordModal = ({ password, onConfirm, onCancel }) => {
             <div className="absolute -inset-0.5 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] rounded-lg blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
             <div className="relative flex items-center gap-3 bg-[#060d1a] border border-[#1a3a5c] rounded-lg px-4 py-4 font-mono text-lg text-white break-all select-all">
               <span className="flex-1 text-center">{password}</span>
-              <button 
+              <button
                 onClick={handleCopy}
                 className="p-2 hover:bg-[#0f1f3a] rounded-md transition-colors text-[#3bb5ff] flex-shrink-0"
                 title="Copy to clipboard"

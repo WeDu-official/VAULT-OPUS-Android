@@ -1,4 +1,5 @@
-// FileExplorer.jsx
+// FileExplorer.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
 

@@ -1,3 +1,5 @@
+// DownloadVersionModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 
 export default function DownloadVersionModal({
@@ -108,7 +110,7 @@ export default function DownloadVersionModal({
         if (allVersions) {
             args.push('--all_versions', 'yes');
         } else if (startVersion && endVersion) {
-            args.push('--start_version', startVersion, '--end_version', endVersion);
+            args.push('--st_version', startVersion, '--en_version', endVersion);
         } else if (versionInput) {
             args.push('--version', versionInput);
         }

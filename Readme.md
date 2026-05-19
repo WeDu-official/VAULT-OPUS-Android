@@ -18,6 +18,8 @@ Vault Opus Android is the native mobile implementation of the Infinity Cloud Sto
 1. Download the latest `app-debug.apk`(in app/build/outputs/debug) or from the releases.
 2. Open the APK on your Android device.
 3. If prompted, allow installation from "Unknown Sources." or permissions to allow access to all your files, allow it too
+note: if you have android before Android 11 (API level 30) you gotta go to settings -> apps
+-> VAULT OPUS -> permissions -> grant it storage permission
 4. Launch **VAULT OPUS** from your app drawer.
 5. make a discord bot with nessesary permissions(or just as admin if you wanna it faster) take it's token and save it
 6. make a discord server and at least a single text channel and take the channel id

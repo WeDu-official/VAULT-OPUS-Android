@@ -1,8 +1,9 @@
-//Sidebar.jsx
+// Sidebar.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import { Database, Plus, Edit2, ChevronRight, X, FolderOpen, History, LayoutGrid, Trash2, Share2, ExternalLink, RefreshCw, Bomb } from 'lucide-react';
 
-export default function Sidebar({ dbs, recentVolumes = [], selectedDb, onSelectDb, onRenameVolume, onOpenVolume, onDeleteVolume, onRemoveFromList, onShareVolume, onOpenSharables, onRefreshDbs, onClose, onNukeVolume }) {
+export default function Sidebar({ dbs, recentVolumes = [], selectedDb, onSelectDb, onRenameVolume, onDeleteVolume, onRemoveFromList, onShareVolume, onOpenSharables, onRefreshDbs, onClose, onNukeVolume }) {
   const [logoError, setLogoError] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
 
@@ -71,7 +72,7 @@ export default function Sidebar({ dbs, recentVolumes = [], selectedDb, onSelectD
       </div>
 
       {/* Action Buttons */}
-      <div className="p-3 border-b border-[#1a3a5c] grid grid-cols-3 gap-2">
+      <div className="p-3 border-b border-[#1a3a5c] grid grid-cols-2 gap-2">
         <button
           onClick={() => {
             const event = new CustomEvent('create-volume');
@@ -82,14 +83,6 @@ export default function Sidebar({ dbs, recentVolumes = [], selectedDb, onSelectD
         >
           <Plus size={14} className="group-hover:rotate-90 transition-transform duration-200" />
           New
-        </button>
-        <button
-          onClick={onOpenVolume}
-          className="flex flex-col items-center justify-center gap-1 py-2 bg-[#0f1f3a] hover:bg-[#1a3a5c] border border-[#1a3a5c] border-dashed rounded-lg text-[#3bb5ff] text-[10px] font-medium transition-all duration-200 active:scale-95 group"
-          title="Open Volume"
-        >
-          <FolderOpen size={14} />
-          Open
         </button>
         <button
           onClick={onOpenSharables}

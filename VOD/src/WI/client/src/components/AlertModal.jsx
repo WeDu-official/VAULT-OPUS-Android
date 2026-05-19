@@ -1,4 +1,5 @@
-//AlertModal.jsx
+// AlertModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React from 'react';
 import { AlertCircle, XCircle, Info, CheckCircle2 } from 'lucide-react';
 
@@ -33,7 +34,7 @@ const AlertModal = ({ isOpen, onClose, title, message, type = 'error', action = 
           <div className="mb-2 animate-in slide-in-from-top-4 duration-500">
             {icons[type]}
           </div>
-          
+
           <div className="space-y-2">
             <h2 className="text-xl font-bold text-white tracking-tight">{title || 'Attention'}</h2>
             <div className="text-gray-400 text-sm leading-relaxed max-w-[280px] mx-auto whitespace-pre-wrap">
@@ -49,8 +50,8 @@ const AlertModal = ({ isOpen, onClose, title, message, type = 'error', action = 
                   if (action.closeOnClick !== false) onClose();
                 }}
                 className={`w-full py-3 rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg
-                  ${action.isDanger 
-                    ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20 text-white' 
+                  ${action.isDanger
+                    ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20 text-white'
                     : 'bg-[#1a3a5c] hover:bg-[#254d7a] text-[#3bb5ff] border border-[#3bb5ff]/20'}`}
               >
                 {action.label}

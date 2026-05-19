@@ -1,3 +1,5 @@
+// NukeModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 import { Bomb, AlertTriangle } from 'lucide-react';
 

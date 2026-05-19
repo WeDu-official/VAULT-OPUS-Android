@@ -1,4 +1,5 @@
-//FullNameModal.jsx
+// FullNameModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React from 'react';
 
 export default function FullNameModal({ isOpen, onClose, item }) {
@@ -30,8 +31,8 @@ export default function FullNameModal({ isOpen, onClose, item }) {
               {item.is_nicknamed ? "Nickname (Display Name)" : "Original Base Filename (Display Name)"}
             </label>
             <div className="p-4 bg-[#060d1a] border border-[#1a3a5c] rounded-xl text-[#3bb5ff] font-mono text-sm break-all max-h-32 overflow-y-auto custom-scrollbar">
-              {item.is_nicknamed 
-                ? (item.db_name || item.base_filename || item.name || item.displayName || "Unknown Nickname") 
+              {item.is_nicknamed
+                ? (item.db_name || item.base_filename || item.name || item.displayName || "Unknown Nickname")
                 : (item.original_name || item.original_base_filename || item.db_name || item.base_filename || item.name || item.displayName || "Unknown Name")}
             </div>
           </div>
@@ -47,6 +48,16 @@ export default function FullNameModal({ isOpen, onClose, item }) {
               </div>
             </div>
           )}
+
+          {/* Box 3: Item ID */}
+          <div className="space-y-2">
+            <label className="text-[10px] text-[#3bb5ff] font-bold uppercase tracking-widest opacity-70">
+              Item ID
+            </label>
+            <div className="p-4 bg-[#060d1a] border border-[#1a3a5c] rounded-xl text-white font-mono text-sm break-all">
+              {item.itemid}
+            </div>
+          </div>
         </div>
 
         <div className="p-6 bg-[#060d1a]/50 border-t border-[#1a3a5c]">

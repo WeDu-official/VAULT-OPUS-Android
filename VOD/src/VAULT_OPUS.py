@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-2-release
+#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-5
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -27,7 +27,10 @@ import io
 # Load configuration (creates config.json if it doesn't exist)
 VAULT_OPUS_SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 #------------------TOKENS------------------------------------------------------------
-token = get_token()  # Will raise error if not properly configured
+try:
+    token = get_token()
+except ValueError:
+    token = ""
 #------------------------------------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
@@ -102,6 +105,79 @@ class FileBotAPI(commands.Bot):
         await self.process_commands(message)
 
 if __name__ == "__main__":
+    SETUP_FILE = os.path.join(VAULT_OPUS_SRC_DIR, "setup_complete.txt")
+    if "--flip-setup" in sys.argv:
+        current_val = 0
+        if os.path.exists(SETUP_FILE):
+            try:
+                with open(SETUP_FILE, "r") as f:
+                    current_val = int(f.read().strip())
+            except:
+                pass
+        new_val = 1 if current_val == 0 else 0
+        with open(SETUP_FILE, "w") as f:
+            f.write(str(new_val))
+        print(f"Setup status flipped from {current_val} to {new_val}.")
+        sys.exit(0)
+
+    setup_complete = 0
+    if os.path.exists(SETUP_FILE):
+        try:
+            with open(SETUP_FILE, "r") as f:
+                setup_complete = int(f.read().strip())
+        except:
+            pass
+
+    if setup_complete == 0 and "--inputfile" not in sys.argv:
+        async def do_cli_setup():
+            global token
+            print("=====================================================")
+            print("  WELCOME TO VAULT OPUS - FIRST TIME SETUP")
+            print("=====================================================")
+            new_token = input("Please enter your Discord Bot Token: ").strip()
+            new_channel = input("Please enter your Discord Channel ID: ").strip()
+            new_db_name = input("Please enter the name of your first Volume (e.g. main): ").strip()
+            
+            config_obj.update("discord", "token", value=new_token)
+            config_obj.update("discord", "channel_id", value=new_channel)
+            token = new_token
+            
+            import re
+            from volume_manager import validate_volume_name, create_volume_config
+            try:
+                stem = validate_volume_name(new_db_name)
+                db_name = stem + ".db"
+                if re.match(r'^[a-zA-Z0-9_.-]+$', db_name):
+                    db_path = os.path.join(os.path.join(VAULT_OPUS_SRC_DIR, "DATABASES"), db_name)
+                    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                    dummy_entry = {col: None for col in file_table_columns}
+                    await db._db_insert_sync(db_path, dummy_entry)
+                    await db._db_delete_sync(db_path, [{"base_filename": ""}])
+                    create_volume_config(db_name)
+                    
+                    recent_file = os.path.join(VAULT_OPUS_SRC_DIR, "recent_volumes.json")
+                    try:
+                        import json
+                        recent = []
+                        if os.path.exists(recent_file):
+                            with open(recent_file, "r") as f:
+                                recent = json.load(f)
+                        if db_name not in recent:
+                            recent.insert(0, db_name)
+                            with open(recent_file, "w") as f:
+                                json.dump(recent, f, indent=4)
+                    except:
+                        pass
+            except Exception as e:
+                print(f"Failed to create initial database: {e}")
+                
+            with open(SETUP_FILE, "w") as f:
+                f.write("1")
+            print("Setup complete! Resuming command...")
+            print("=====================================================")
+
+        asyncio.run(do_cli_setup())
+
     bot = FileBotAPI(intents=intents)
 
     @bot.event
@@ -113,6 +189,9 @@ if __name__ == "__main__":
         # No arguments provided - show CLI help message
         print("VAULT_OPUS - CLI Tool")
         print("Usage: python VAULT_OPUS.py <command> [options]")
+        print("")
+        print("Global options:")
+        print("  --flip-setup  Toggle the setup completed flag and exit immediately")
         print("")
         print("Available commands:")
         print("  upload     Upload a file or folder")
@@ -129,6 +208,7 @@ if __name__ == "__main__":
 
     async def run_cli():
         parser = argparse.ArgumentParser(description="VAULT_OPUS CLI Tool")
+        parser.add_argument("--flip-setup", action="store_true", help="Toggle the setup completed flag and exit immediately")
         subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
         # Upload Command
@@ -194,8 +274,8 @@ if __name__ == "__main__":
         delete_parser.add_argument("target_path", type=str)
         delete_parser.add_argument("-db", "--database_file", type=str, required=True)
         delete_parser.add_argument("--version", type=str, default=None)
-        delete_parser.add_argument("--start_version", type=str, default=None)
-        delete_parser.add_argument("--end_version", type=str, default=None)
+        delete_parser.add_argument("--st_version", type=str, default=None)
+        delete_parser.add_argument("--en_version", type=str, default=None)
         delete_parser.add_argument("--inputfile", type=str)
         delete_parser.add_argument("--all_versions", choices=["yes", "no"], default="no")
         delete_parser.add_argument("--skip_confirmation", choices=["yes", "no"], default="no")
@@ -258,6 +338,10 @@ if __name__ == "__main__":
             ph.input_file_path = args.inputfile
 
         # Initialize bot for CLI operations
+        if not token:
+            print("Error: Discord Token is empty. Please run setup.")
+            sys.exit(1)
+            
         await bot.login(token)
 
         if args.command in ["upload", "update"]:

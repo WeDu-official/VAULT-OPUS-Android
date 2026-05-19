@@ -1,4 +1,5 @@
-//SharablesModal.jsx
+// SharablesModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import { X, Package, Loader2, Folder, ChevronRight, Search, Home, Database, Download, FileText } from 'lucide-react';
 
@@ -90,7 +91,7 @@ export default function SharablesModal({ isOpen, onClose, onImportPackage }) {
               <X className="w-6 h-6" />
             </button>
           </div>
-          
+
           <div className="flex gap-2 p-1 bg-[#060d1a] rounded-xl border border-[#1a3a5c]">
             <button
               onClick={() => setViewMode('browse')}
@@ -160,7 +161,7 @@ export default function SharablesModal({ isOpen, onClose, onImportPackage }) {
                       <FileText className="w-5 h-5 text-gray-700" />
                     )}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm truncate ${item.is_vov ? 'text-gray-200 group-hover:text-white' : 'text-gray-400'}`}>
                       {item.name}

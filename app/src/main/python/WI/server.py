@@ -1,27 +1,11 @@
 #---------------------------------------------------------------------
-#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 
 import os
 import sys
 import platform
-
-# Add path BEFORE imports
-VAULT_OPUS_SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if VAULT_OPUS_SRC_DIR not in sys.path:
-    sys.path.insert(0, VAULT_OPUS_SRC_DIR)
-
-from path_utils import ANDROID_WRITABLE_DIR, normalize_path
-
-# []===================THE ENCODING FIX==========================[]
-try:
-    from encoding_fix import apply as _fix_encoding
-    _fix_encoding()
-except Exception as e:
-    print(f"Encoding fix failed: {e}")
-
-# []=================START OF ACTUAL CODE========================[]
 import asyncio
 import json
 import hashlib
@@ -38,7 +22,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
-# Setup logging
+# Add path BEFORE imports
+VAULT_OPUS_SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if VAULT_OPUS_SRC_DIR not in sys.path:
+    sys.path.insert(0, VAULT_OPUS_SRC_DIR)
+
+from path_utils import ANDROID_WRITABLE_DIR, normalize_path
+
+# []===================THE ENCODING FIX==========================[]
+try:
+    from encoding_fix import apply as _fix_encoding
+    _fix_encoding()
+except Exception as e:
+    print(f"Encoding fix failed: {e}")
+
+# []=================START OF ACTUAL CODE========================[]
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VAULT_OPUS_WebAPI")
 
@@ -68,12 +67,18 @@ if is_android:
                     try:
                         with open(src, 'r') as f: s = json.load(f)
                         with open(dst, 'r') as f: d = json.load(f)
-                        # Always update if tokens are different and src is not a placeholder
+                        
                         s_token = s.get("discord", {}).get("token", "")
-                        if s_token and "PLACEHOLDER" not in s_token and s_token != d.get("discord", {}).get("token"):
+                        d_token = d.get("discord", {}).get("token", "")
+                        
+                        # Only update if src has a REAL token that is different from dst
+                        if s_token and "PLACEHOLDER" not in s_token and s_token != d_token:
                             return True
-                        # Also update if channel_id is different
-                        if s.get("discord", {}).get("channel_id") != d.get("discord", {}).get("channel_id"):
+                            
+                        # Same for channel_id
+                        s_cid = str(s.get("discord", {}).get("channel_id", ""))
+                        d_cid = str(d.get("discord", {}).get("channel_id", ""))
+                        if s_cid and "PLACEHOLDER" not in s_cid and s_cid != d_cid:
                             return True
                     except: return True
                     return False
@@ -110,7 +115,6 @@ else:
 
 from config_manager import get_config
 from database import DatabaseManager
-from versioning import VersioningManager
 from listfiles_tools.listfiles_tree import ListFilesTreeBuilder, ListFilesFormatter
 from listfiles_tools.listfiles_parser import ListFilesParser
 import volume_manager
@@ -130,42 +134,36 @@ os.makedirs(DB_DIR, exist_ok=True)
 
 # Global instances for reuse
 db_manager = DatabaseManager(file_table_columns=file_table_columns, log=logger)
-versioning_manager = VersioningManager(db_read_func=db_manager._db_read_sync, db=db_manager, log=logger)
+versioning_manager = None  # Lazy-loaded in endpoints if needed
 parser = ListFilesParser(log=logger)
 tree_builder = ListFilesTreeBuilder(log=logger)
 formatter = ListFilesFormatter(log=logger)
 
 app = FastAPI(title="VAULT_OPUS Web GUI API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.middleware("http")
 async def unified_middleware(request, call_next):
-    logger.info(f"--- [REQUEST] {request.method} {request.url} ---")
-    logger.info(f"Headers: {dict(request.headers)}")
-    
-    if request.method == "OPTIONS":
-        logger.info("Handling OPTIONS preflight")
-        response = Response(status_code=204)
-    else:
-        try:
-            response = await call_next(request)
-        except Exception as e:
-            logger.error(f"[SERVER ERROR] {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
-            response = JSONResponse(status_code=500, content={"detail": str(e)})
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        logger.error(f"[SERVER ERROR] {str(e)}")
+        response = JSONResponse(status_code=500, content={"detail": str(e)})
             
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Origin, Accept"
     response.headers["Access-Control-Allow-Private-Network"] = "true"
-    response.headers["Access-Control-Max-Age"] = "86400"
-    
-    logger.info(f"--- [RESPONSE] {response.status_code} ---")
     return response
 
 @app.on_event("startup")
 async def startup_event():
     logger.info("FastAPI Server starting up (Android Mode)...")
+    volume_manager.ensure_dirs()
     config_path = os.path.join(WRITABLE_DIR, "config.json")
     config_obj = get_config(config_path)
     config = config_obj._config
@@ -202,6 +200,48 @@ class TaskManager:
 
 task_manager = TaskManager(os.path.join(WRITABLE_DIR, "config.json"))
 
+RECENT_VOLUMES_FILE = os.path.join(WRITABLE_DIR, "recent_volumes.json")
+
+def get_recent_volumes() -> List[str]:
+    if not os.path.exists(RECENT_VOLUMES_FILE): return []
+    try:
+        with open(RECENT_VOLUMES_FILE, "r") as f: 
+            items = json.load(f)
+            if not isinstance(items, list): return []
+            # Deduplicate and validate existence
+            valid = []
+            seen = set()
+            for item in items:
+                if item and item not in seen:
+                    db_path = os.path.join(DB_DIR, item)
+                    if os.path.exists(db_path):
+                        valid.append(item)
+                        seen.add(item)
+            return valid
+    except Exception: return []
+
+def save_recent_volumes(recent: List[str]):
+    try:
+        # Deduplicate before saving
+        unique_recent = []
+        seen = set()
+        for r in recent:
+            if r and r not in seen:
+                unique_recent.append(r)
+                seen.add(r)
+        with open(RECENT_VOLUMES_FILE, "w") as f: json.dump(unique_recent, f, indent=4)
+    except Exception as e: logger.error(f"Failed to save recent volumes: {e}")
+
+SETUP_FILE = os.path.join(WRITABLE_DIR, "setup_complete.txt")
+
+def is_setup_complete() -> int:
+    if not os.path.exists(SETUP_FILE): return 0
+    try:
+        with open(SETUP_FILE, "r") as f:
+            val = f.read().strip()
+            return 1 if val == "1" else 0
+    except: return 0
+
 @app.get("/api/ping")
 async def ping():
     return {"status": "ok", "platform": platform.platform(), "writable_dir": WRITABLE_DIR}
@@ -216,7 +256,6 @@ async def get_current_config():
     try:
         config_path = os.path.join(WRITABLE_DIR, "config.json")
         config_obj = get_config(config_path)
-        # Ensure fresh load from disk
         config_obj.reload()
         return config_obj._config
     except Exception as e:
@@ -236,28 +275,105 @@ async def update_config(new_config: Dict[str, Any]):
     except Exception as e:
         logger.error(f"Failed to save config: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save config: {str(e)}")
-
+    
     task_manager.refresh()
     return {"status": "success", "config": config_obj._config}
+
+@app.get("/api/recent_volumes")
+async def get_recent_volumes_endpoint():
+    return {"recent": get_recent_volumes()}
+
+@app.post("/api/recent_volumes")
+async def save_recent_volumes_endpoint(payload: Dict[str, Any]):
+    recent = payload.get("recent", [])
+    save_recent_volumes(recent)
+    return {"status": "success", "recent": recent}
+
+@app.get("/api/setup_status")
+async def get_setup_status_endpoint():
+    config = get_config(os.path.join(WRITABLE_DIR, "config.json"))
+    token = config._config.get("discord", {}).get("token", "")
+    has_valid_token = True if (token and "placeholder" not in token.lower()) else False
+    channel_id = str(config._config.get("discord", {}).get("channel_id", ""))
+    has_valid_channel = True if (channel_id and "placeholder" not in channel_id.lower()) else False
+    has_valid_volume = False
+    db_dir = os.path.join(WRITABLE_DIR, "DATABASES")
+    config_dir = os.path.join(WRITABLE_DIR, "VOLUMES_CONFIGS")
+    if os.path.exists(db_dir):
+        for f in os.listdir(db_dir):
+            if f.endswith(".db"):
+                stem = f[:-3]
+                if os.path.exists(os.path.join(config_dir, f"{stem}_config.json")):
+                    has_valid_volume = True; break
+    current_status = is_setup_complete()
+    if has_valid_token and has_valid_channel and has_valid_volume and current_status == 0:
+        with open(SETUP_FILE, "w") as f: f.write("1")
+        current_status = 1
+    return {"setup_complete": current_status, "has_valid_token": has_valid_token, "has_valid_channel": has_valid_channel, "has_valid_volume": has_valid_volume}
+
+@app.post("/api/setup")
+async def perform_setup(payload: Dict[str, Any]):
+    config = get_config(os.path.join(WRITABLE_DIR, "config.json"))
+    token = payload.get("token")
+    channel_id = payload.get("channel_id")
+    db_name = payload.get("db_name")
+    
+    if not bool(config._config.get("discord", {}).get("token", "").replace("PLACEHOLDER_TOKEN","")):
+        if not token: raise HTTPException(status_code=400, detail="Discord Token is required")
+        config._config["discord"]["token"] = token
+    if not bool(str(config._config.get("discord", {}).get("channel_id", "")).replace("PLACEHOLDER_CHANNEL_ID","")):
+        if not channel_id: raise HTTPException(status_code=400, detail="Discord Channel ID is required")
+        config._config["discord"]["channel_id"] = channel_id
+    config._save_config()
+    
+    first_db = None
+    db_dir = os.path.join(WRITABLE_DIR, "DATABASES")
+    if os.path.exists(db_dir):
+        for f in os.listdir(db_dir):
+            if f.endswith(".db"): first_db = f; break
+    
+    if not first_db:
+        if not db_name: raise HTTPException(status_code=400, detail="Volume Name is required")
+        try:
+            stem = volume_manager.validate_volume_name(db_name)
+            db_name = stem + ".db"
+            db_path = os.path.join(DB_DIR, db_name)
+            if not os.path.exists(db_path):
+                dummy = {col: "" for col in file_table_columns}
+                for c in ["part_number", "total_parts", "message_id", "channel_id", "is_nicknamed", "is_base_filename_nicknamed", "store_hash_flag"]: dummy[c] = 0
+                dummy["encryption_key_auto"] = b""
+                await db_manager._db_insert_sync(db_path, dummy)
+                await db_manager._db_delete_sync(db_path, [{"base_filename": ""}])
+                volume_manager.create_volume_config(db_name)
+                recent = get_recent_volumes()
+                if db_name not in recent: recent.insert(0, db_name); save_recent_volumes(recent)
+        except Exception as e: raise HTTPException(status_code=400, detail=f"Failed to create volume: {str(e)}")
+    else: db_name = first_db
+    with open(SETUP_FILE, "w") as f: f.write("1")
+    return {"status": "success", "db_name": db_name}
 
 @app.post("/api/dbs/create")
 async def create_db(db_name: str = Body(..., embed=True)):
     try:
         stem = volume_manager.validate_volume_name(db_name)
         db_name = stem + ".db"
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e: raise HTTPException(status_code=400, detail=str(e))
     db_path = os.path.join(DB_DIR, db_name)
-    if os.path.exists(db_path):
-        raise HTTPException(status_code=409, detail=f"Database '{db_name}' already exists")
+    if os.path.exists(db_path): raise HTTPException(status_code=409, detail=f"Database '{db_name}' already exists")
     try:
-        dummy_entry = {col: "" for col in file_table_columns}
-        for col in ["part_number", "total_parts", "message_id", "channel_id", "is_nicknamed", "is_base_filename_nicknamed", "store_hash_flag"]:
-            dummy_entry[col] = 0
-        dummy_entry["encryption_key_auto"] = b""
-        await db_manager._db_insert_sync(db_path, dummy_entry)
+        dummy = {col: "" for col in file_table_columns}
+        for c in ["part_number", "total_parts", "message_id", "channel_id", "is_nicknamed", "is_base_filename_nicknamed", "store_hash_flag"]: dummy[c] = 0
+        dummy["encryption_key_auto"] = b""
+        await db_manager._db_insert_sync(db_path, dummy)
         await db_manager._db_delete_sync(db_path, [{"base_filename": ""}])
         volume_manager.create_volume_config(db_name)
+        
+        # Auto-add to recent
+        recent = get_recent_volumes()
+        if db_name not in recent:
+            recent.insert(0, db_name)
+            save_recent_volumes(recent)
+            
         return {"status": "success", "db_name": db_name}
     except Exception as e:
         logger.error(f"Error creating DB: {e}")
@@ -268,12 +384,10 @@ async def rename_db(old_name: str = Body(..., embed=True), new_name: str = Body(
     try:
         stem = volume_manager.validate_volume_name(new_name)
         new_name = stem + ".db"
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError as e: raise HTTPException(status_code=400, detail=str(e))
     old_path = os.path.join(DB_DIR, old_name)
     new_path = os.path.join(DB_DIR, new_name)
-    if not os.path.exists(old_path):
-        raise HTTPException(status_code=404, detail="Source DB not found")
+    if not os.path.exists(old_path): raise HTTPException(status_code=404, detail="Source DB not found")
     try:
         os.rename(old_path, new_path)
         volume_manager.rename_volume_config(old_name, new_name)
@@ -297,7 +411,15 @@ async def share_db(db_name: str = Body(..., embed=True)):
 async def import_db(vov_path: str = Body(..., embed=True)):
     try:
         db_path, cfg_path = volume_manager.open_package(vov_path)
-        return {"status": "success", "db_name": os.path.basename(db_path)}
+        db_name = os.path.basename(db_path)
+        
+        # Auto-add to recent
+        recent = get_recent_volumes()
+        if db_name not in recent:
+            recent.insert(0, db_name)
+            save_recent_volumes(recent)
+            
+        return {"status": "success", "db_name": db_name}
     except Exception as e:
         logger.error(f"Error importing volume: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -311,25 +433,15 @@ async def list_sharables():
             full_path = os.path.join(volume_manager.SHARABLES_DIR, item)
             is_dir = os.path.isdir(full_path)
             is_vov = item.lower().endswith('.vov')
-            if is_dir or is_vov:
-                items.append({"name": item, "path": full_path, "is_dir": is_dir, "is_vov": is_vov})
+            if is_dir or is_vov: items.append({"name": item, "path": full_path, "is_dir": is_dir, "is_vov": is_vov})
         items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
         return {"items": items, "path": str(volume_manager.SHARABLES_DIR)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dbs/open_sharables")
 async def open_sharables():
-    """Opens the SHARABLES folder in the host OS explorer."""
-    try:
-        success = volume_manager.open_explorer_for_sharables()
-        if success:
-            return {"status": "success", "message": "Opening file explorer on host."}
-        else:
-            return {"status": "error", "message": "Failed to open file explorer on host."}
-    except Exception as e:
-        logger.error(f"Error opening sharables: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    if volume_manager.open_explorer_for_sharables(): return {"status": "success"}
+    else: raise HTTPException(status_code=500, detail="Could not open sharables folder")
 
 @app.get("/api/fs/home")
 async def get_home_dir():
@@ -342,7 +454,6 @@ async def create_folder(request: dict):
     folder_name = request.get("folder_name")
     parent_path = request.get("parent_path", ".")
     if not db_name.lower().endswith('.db'): db_name += '.db'
-    db_path = os.path.join(DB_DIR, db_name)
     try:
         from modify import ModifyContext
         class MockBot: log = logger; intents = None; http_session = None
@@ -359,55 +470,27 @@ async def create_folder(request: dict):
 @app.post("/api/dbs/delete")
 async def delete_db_endpoint(request: dict):
     db_name = request.get("db_name")
-    if not db_name:
-        raise HTTPException(status_code=400, detail="Missing db_name")
-
-    logger.info(f"Deletion request received for: {db_name}")
+    if not db_name: raise HTTPException(status_code=400, detail="Missing db_name")
     if not db_name.lower().endswith('.db'): db_name += '.db'
-
     try:
-        # 1. Resolve DB path
         db_path = Path(volume_manager.DATABASES_DIR) / db_name
-        logger.info(f"Resolved DB path: {db_path} (Exists: {db_path.exists()})")
-
-        if db_path.exists():
-            try:
-                db_path.unlink()
-                logger.info(f"Successfully unlinked DB file: {db_path}")
-            except Exception as e:
-                logger.error(f"Failed to unlink DB file {db_path}: {e}")
-                raise Exception(f"File system error: {e}")
-        else:
-            logger.warning(f"DB file not found at expected path: {db_path}")
-
-        # 2. Delete sidecar config
+        if db_path.exists(): os.remove(db_path)
         stem = Path(db_name).stem
         config_path = Path(volume_manager.VOLUMES_CONFIGS_DIR) / f"{stem}_config.json"
-        logger.info(f"Resolved config path: {config_path} (Exists: {config_path.exists()})")
-
-        if config_path.exists():
-            config_path.unlink()
-            logger.info(f"Successfully unlinked config file: {config_path}")
-
-        return {"status": "success", "message": f"Volume '{db_name}' deleted."}
+        if config_path.exists(): os.remove(config_path)
+        return {"status": "success"}
     except Exception as e:
-        logger.error(f"Error during volume deletion process: {e}")
+        logger.error(f"Error deleting volume: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dbs/nuke")
 async def nuke_db(payload: dict):
     db_name = payload.get("db_name")
-    if not db_name:
-        raise HTTPException(status_code=400, detail="Missing db_name")
-    if not db_name.lower().endswith('.db'):
-        db_name += '.db'
-
+    if not db_name: raise HTTPException(status_code=400, detail="Missing db_name")
+    if not db_name.lower().endswith('.db'): db_name += '.db'
     db_path = os.path.join(DB_DIR, db_name)
-    if not os.path.exists(db_path):
-        raise HTTPException(status_code=404, detail=f"Database '{db_name}' not found")
-
+    if not os.path.exists(db_path): raise HTTPException(status_code=404, detail=f"Database '{db_name}' not found")
     def _do_nuke():
-        import sqlite3
         conn = None
         try:
             conn = sqlite3.connect(db_path, timeout=1.0, isolation_level=None)
@@ -422,41 +505,28 @@ async def nuke_db(payload: dict):
             try: cursor.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             except: pass
             return deleted
-        except sqlite3.OperationalError as e:
-            logger.error(f"[NUKE] Database locked: {e}")
-            raise RuntimeError(f"Database is locked by another connection: {e}")
+        except sqlite3.OperationalError as e: raise RuntimeError(f"Database locked: {e}")
         finally:
-            if conn:
-                try: conn.close()
-                except: pass
-
+            if conn: conn.close()
     try:
         deleted = await asyncio.to_thread(_do_nuke)
-        return {"status": "success", "db_entries_deleted": deleted, "message": f"Database '{db_name}' wiped. {deleted} entries destroyed."}
-    except RuntimeError as e:
-        raise HTTPException(status_code=423, detail=str(e))
-    except Exception as e:
-        logger.error(f"Error nuking DB: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "success", "db_entries_deleted": deleted}
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/fs/browse")
 async def browse_directory(path: Optional[str] = Query(None)):
-    if not path:
-        path = "/storage/emulated/0" if is_android else str(Path.home())
+    if not path: path = "/storage/emulated/0" if is_android else str(Path.home())
     try:
         p = Path(path).resolve()
         if p.is_file(): p = p.parent
         items = [{"name": "..", "path": str(p.parent), "is_dir": True}] if p.parent != p else []
         for item in p.iterdir():
             try:
-                if not item.name.startswith('.'):
-                    items.append({"name": item.name, "path": str(item.resolve()), "is_dir": item.is_dir()})
+                if not item.name.startswith('.'): items.append({"name": item.name, "path": str(item.resolve()), "is_dir": item.is_dir()})
             except (PermissionError, OSError): continue
         items.sort(key=lambda x: (x['name'] != '..', not x['is_dir'], x['name'].lower()))
         return {"current_path": str(p), "items": items}
-    except Exception as e:
-        logger.error(f"Error browsing: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/listfiles")
 async def list_files_endpoint(db: str, path: str = ".", itemid: Optional[str] = None, version: Optional[str] = None):
@@ -464,114 +534,76 @@ async def list_files_endpoint(db: str, path: str = ".", itemid: Optional[str] = 
     if not db.lower().endswith('.db'): db += '.db'
     db_path = os.path.join(DB_DIR, db)
     if not os.path.exists(db_path): return {"error": "Database not found"}
-    
     try:
         all_entries = await db_manager._db_read_sync(db_path, {})
         if not all_entries: return {"query": {"target_path": path}, "results": {}}
-
         if itemid:
             this_item_entries = [e for e in all_entries if e.get("itemid") == itemid]
             if not this_item_entries: return {"error": "Item not found", "results": {}}
-            
             ref_entry = this_item_entries[0]
             ref_name = ref_entry.get("base_filename", "")
             root_id = ref_entry.get("root_upload_name", "")
             target_itemid = root_id if (root_id and len(root_id) == 33 and root_id[0].lower() in ('f', 'd')) else itemid
-            
             filtered_entries = [e for e in all_entries if e.get("itemid") == target_itemid or e.get("root_upload_name") == target_itemid]
-            
             versions = {}
             for entry in filtered_entries:
                 ver = entry.get("version", "unknown")
                 if ver not in versions: versions[ver] = []
                 versions[ver].append(entry)
-            
             sorted_versions = sorted(versions.items(), key=lambda x: max((e.get("upload_timestamp", "") for e in x[1]), default=""), reverse=True)
-            
             results = {}
             for ver, entries in sorted_versions:
                 rep = next((e for e in entries if e.get("itemid") == target_itemid), None)
                 if not rep: rep = next((e for e in entries if e.get("base_filename") == ref_name), entries[0])
-                
                 key = f"{rep.get('root_upload_name', '')}/{rep.get('relative_path_in_archive', '')}/{rep.get('base_filename', '')}".strip('/')
                 if not key: key = rep.get("base_filename", "unknown")
-                
                 results[key] = {
-                    "name": rep.get("base_filename", "unknown"),
-                    "db_name": rep.get("root_upload_name", ""),
+                    "name": rep.get("base_filename", "unknown"), "db_name": rep.get("root_upload_name", ""),
                     "type": "folder" if rep.get("itemid", "").lower().startswith('d') else "file",
-                    "version": ver, "itemid": rep.get("itemid"),
-                    "total_parts": rep.get("total_parts", 0),
-                    "upload_timestamp": rep.get("upload_timestamp", ""),
-                    "encryption_mode": rep.get("encryption_mode", "off"),
-                    "contents": {e.get("relative_path_in_archive", e.get("base_filename", "")): {
-                        "name": e.get("base_filename", "unknown"),
-                        "type": "folder" if e.get("itemid", "").lower().startswith('d') else "file",
-                        "version": ver, "itemid": e.get("itemid"),
-                        "total_parts": e.get("total_parts", 0),
-                        "upload_timestamp": e.get("upload_timestamp", ""),
-                        "encryption_mode": e.get("encryption_mode", "off"),
-                    } for e in entries if e.get("itemid") != rep.get("itemid")}
+                    "version": ver, "itemid": rep.get("itemid"), "total_parts": rep.get("total_parts", 0),
+                    "upload_timestamp": rep.get("upload_timestamp", ""), "encryption_mode": rep.get("encryption_mode", "off"),
+                    "contents": {e.get('relative_path_in_archive', e.get('base_filename', '')): {"name": e.get("base_filename", "unknown"), "type": "folder" if e.get("itemid", "").lower().startswith('d') else "file", "version": ver, "itemid": e.get("itemid"), "total_parts": e.get("total_parts", 0), "upload_timestamp": e.get("upload_timestamp", ""), "encryption_mode": e.get("encryption_mode", "off")} for e in entries if e.get("itemid") != rep.get("itemid")}
                 }
             return {"query": {"itemid": itemid, "resolved_root": target_itemid}, "results": results, "stats": {"total_items": len(filtered_entries), "total_versions": len(versions)}}
-
         query_parts = [path, "-f", "nested", "idshow=no", "showoriginal=no", "depth=1"]
         if version: query_parts.extend(["version="+version, "all_versions=yes"])
         query = parser.parse(" ".join(query_parts))
-        
         resolved_path_info = await db_manager._resolve_human_path_to_db_entry_keys(path, all_entries) if path != "." else None
         if path != "." and not resolved_path_info: return {"error": f"Path '{path}' not found", "results": {}}
-
         from listfiles_tools.listfiles_parser import ListFilesFilter
+        from versioning import VersioningManager
+        global versioning_manager
+        if versioning_manager is None: versioning_manager = VersioningManager(db_read_func=db_manager._db_read_sync, db=db_manager, log=logger)
         filter_engine = ListFilesFilter(versioning_manager=versioning_manager, log=logger)
         filtered_entries = filter_engine.apply_filters(all_entries, query, resolved_path_info)
         forests = tree_builder.build_tree(filtered_entries, query, root_path=path)
-        
         if resolved_path_info:
             target_id = resolved_path_info[4]
             for root_id, root_node in forests.items():
                 target_node = tree_builder._find_node_by_id(root_node, target_id)
                 if target_node: forests = {target_id: target_node}; break
-
         return formatter.format_output(forests, query, include_stats=True)
-    except Exception as e:
-        logger.error(f"Error listing files: {e}")
-        return {"error": str(e)}
+    except Exception as e: return {"error": str(e)}
 
 class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
+    def __init__(self): self.active_connections: List[WebSocket] = []
+    async def connect(self, websocket: WebSocket): await websocket.accept(); self.active_connections.append(websocket)
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections: self.active_connections.remove(websocket)
-    async def send_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
+    async def send_message(self, message: str, websocket: WebSocket): await websocket.send_text(message)
 
 manager = ConnectionManager()
 
 class WSStream(io.IOBase):
-    def __init__(self, websocket, task_id, loop):
-        self.websocket = websocket; self.task_id = task_id; self.loop = loop
+    def __init__(self, websocket, task_id, loop): self.websocket = websocket; self.task_id = task_id; self.loop = loop
     def write(self, s):
-        if s.strip():
-            asyncio.run_coroutine_threadsafe(
-                manager.send_message(json.dumps({"type": "stdout", "task_id": self.task_id, "data": s}), self.websocket),
-                self.loop
-            )
+        if s.strip(): asyncio.run_coroutine_threadsafe(manager.send_message(json.dumps({"type": "stdout", "task_id": self.task_id, "data": s}), self.websocket), self.loop)
         return len(s)
 
 @app.websocket("/ws/cli")
 async def websocket_endpoint(websocket: WebSocket):
-    logger.info(f"--- [WS ATTEMPT] {websocket.client} ---")
-    try:
-        await manager.connect(websocket)
-        logger.info(f"--- [WS CONNECTED] {websocket.client} ---")
-    except Exception as e:
-        logger.error(f"--- [WS CONNECTION ERROR] {str(e)} ---")
-        return
-
+    try: await manager.connect(websocket)
+    except Exception as e: logger.error(f"--- [WS CONNECTION ERROR] {str(e)} ---"); return
     active_tasks = {}
     async def run_task(task_id, command_args):
         input_file_path = None
@@ -586,10 +618,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await manager.send_message(json.dumps({"type": "status", "task_id": task_id, "data": "Queued...\n"}), websocket)
             async with semaphore:
                 async with task_manager.start_lock:
-                    await asyncio.sleep(1)
-                    loop = asyncio.get_running_loop()
-                    stream = WSStream(websocket, task_id, loop)
-                    active_tasks[task_id] = {"input_file_path": input_file_path}
+                    await asyncio.sleep(1); loop = asyncio.get_running_loop(); stream = WSStream(websocket, task_id, loop); active_tasks[task_id] = {"input_file_path": input_file_path}
                     async def watch_input():
                         last_hash = None
                         while task_id in active_tasks:
@@ -598,22 +627,15 @@ async def websocket_endpoint(websocket: WebSocket):
                                 with open(input_file_path, "r") as f: data = json.load(f)
                                 if data.get("status") == "waiting":
                                     h = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
-                                    if h != last_hash:
-                                        await manager.send_message(json.dumps({"type": "prompt", "task_id": task_id, "prompt": data.get("prompt"), "is_password": data.get("is_password")}), websocket)
-                                        last_hash = h
+                                    if h != last_hash: await manager.send_message(json.dumps({"type": "prompt", "task_id": task_id, "prompt": data.get("prompt"), "is_password": data.get("is_password")}), websocket); last_hash = h
                             except: pass
                             await asyncio.sleep(0.5)
-                    watcher = asyncio.create_task(watch_input())
-                    import VAULT_OPUS
-                    stdout_orig = sys.stdout; stderr_orig = sys.stderr
-                    sys.stdout = stream; sys.stderr = stream
+                    watcher = asyncio.create_task(watch_input()); import VAULT_OPUS; stdout_orig = sys.stdout; stderr_orig = sys.stderr; sys.stdout = stream; sys.stderr = stream
                     try:
                         exit_code = 0
                         try: await VAULT_OPUS.run_cli(command_args)
                         except SystemExit as e: exit_code = e.code or 0
-                        except Exception as e:
-                            logger.error(f"Task {task_id} failed: {e}")
-                            stream.write(f"\nError: {str(e)}\n"); exit_code = 1
+                        except Exception as e: logger.error(f"Task {task_id} failed: {e}"); stream.write(f"\nError: {str(e)}\n"); exit_code = 1
                     finally: sys.stdout = stdout_orig; sys.stderr = stderr_orig
                     watcher.cancel()
             await manager.send_message(json.dumps({"type": "exit", "task_id": task_id, "code": exit_code}), websocket)
@@ -624,9 +646,7 @@ async def websocket_endpoint(websocket: WebSocket):
             if task_id in active_tasks: del active_tasks[task_id]
     try:
         while True:
-            data = await websocket.receive_text()
-            payload = json.loads(data)
-            action, task_id = payload.get("action"), payload.get("task_id", "default")
+            data = await websocket.receive_text(); payload = json.loads(data); action, task_id = payload.get("action"), payload.get("task_id", "default")
             if action == "run": asyncio.create_task(run_task(task_id, payload.get("args", [])))
             elif action == "input" and task_id in active_tasks:
                 if (path := active_tasks[task_id].get("input_file_path")) and os.path.exists(path):
@@ -637,34 +657,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
 def start_server():
     import uvicorn
-    import socket
-    
-    # Debug: Print local IPs
-    try:
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
-        logger.info(f"System Hostname: {hostname}, Local IP: {local_ip}")
-    except:
-        logger.info("Could not determine local IP via socket")
-
     logger.info("Starting VAULT_OPUS Uvicorn Server on 0.0.0.0:8000")
     try:
-        config = uvicorn.Config(
-            app, 
-            host="0.0.0.0",
-            port=8000, 
-            log_level="info", 
-            access_log=True,
-            timeout_keep_alive=65,
-            workers=1
-        )
-        config.install_signal_handlers = False
-        server = uvicorn.Server(config)
-        server.run()
-    except Exception as e:
-        logger.error(f"Uvicorn crashed: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+        config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info", access_log=True, timeout_keep_alive=65, workers=1)
+        config.install_signal_handlers = False; server = uvicorn.Server(config); server.run()
+    except Exception as e: logger.error(f"Uvicorn crashed: {e}")
 
 if __name__ == "__main__":
     start_server()

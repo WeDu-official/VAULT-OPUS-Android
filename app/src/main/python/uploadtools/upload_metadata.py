@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#upload_metadata.py (Samael) from the VAULT OPUS PROJECT version 1-beta-2-release
+#upload_metadata.py (Samael) from the VAULT OPUS PROJECT version 1-beta-release-4
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -11,6 +11,7 @@ _fix_encoding()
 #[]=================START OF ACTUAL CODE========================[]
 import os
 import datetime
+import uuid
 from typing import Optional, List, Tuple
 from database import DatabaseManager
 class UploadMetadata(DatabaseManager):
@@ -19,6 +20,10 @@ class UploadMetadata(DatabaseManager):
         self.db = db
         self.log = log
         self.encry = encry
+
+    async def _get_next_id(self, database_file: str, id_type: str) -> str:
+        """Atomically get next ID using UUID."""
+        return f"{id_type}{uuid.uuid4().hex}"
 
     async def is_folder_entry_in_db(self, db_file: str, root_name: str, relative_path: str, version: str, original_base_filename: str, itemid: str = "") -> bool:
         """CHECKS IF A FOLDER EXISTS IN THE DB FOR A GIVEN VERSION.
@@ -52,7 +57,8 @@ class UploadMetadata(DatabaseManager):
             root_upload_name: str,
             version: str,
             is_manual_nickname: bool = False,
-            forced_length_limit: int = 60
+            forced_length_limit: int = 60,
+            name_check: bool = True
     ) -> Tuple[str, bool]:
         """
         Determines a unique root_upload_name / nickname according to rules:
@@ -87,7 +93,7 @@ class UploadMetadata(DatabaseManager):
 
         # --- Case 1: Manual nickname ---
         if is_manual_nickname:
-            if await exists(root_upload_name):
+            if name_check and await exists(root_upload_name):
                 raise ValueError(f"Manual nickname '{root_upload_name}' already exists. Upload aborted.")
             return root_upload_name, True
 

@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
@@ -11,9 +11,9 @@ except Exception:
 #[]=================START OF ACTUAL CODE========================[]
 import sys
 import aiohttp
+import asyncio
 import discord
 from discord.ext import commands
-import asyncio
 import os
 import argparse
 import logging
@@ -109,8 +109,10 @@ async def run_cli(args_list=None):
     dl = subparsers.add_parser("download")
     dl.add_argument("target_path")
     add_common_db(dl)
-    dl.add_argument("-o", "--download_folder", default="./downloads")
+    dl.add_argument("-o", "--download_folder", default="/storage/emulated/0/Download")
     dl.add_argument("--version", default="")
+    dl.add_argument("--st_version", default="")
+    dl.add_argument("--en_version", default="")
     dl.add_argument("--all_versions", choices=["yes", "no"], default="no")
     dl.add_argument("--strictness_mode", choices=["NA", "SA", "HA"], default="NA")
     dl.add_argument("--id_based", action="store_true")
@@ -122,12 +124,15 @@ async def run_cli(args_list=None):
     del_p.add_argument("target_path")
     add_common_db(del_p)
     del_p.add_argument("--version", default=None)
+    del_p.add_argument("--st_version", default=None)
+    del_p.add_argument("--en_version", default=None)
     del_p.add_argument("--all_versions", choices=["yes", "no"], default="no")
     del_p.add_argument("--id_based", action="store_true")
     del_p.add_argument("--hard", action="store_const", const="hard", dest="delete_type")
     del_p.add_argument("--soft", action="store_const", const="soft", dest="delete_type")
     del_p.set_defaults(delete_type="soft")
     del_p.add_argument("--nuke", action="store_true")
+    del_p.add_argument("--skip_confirmation", choices=["yes", "no"], default="no")
     add_common_input(del_p)
 
     # Modify
@@ -140,15 +145,18 @@ async def run_cli(args_list=None):
     mv.add_argument("--src_id_based", action="store_true")
     mv.add_argument("--dst_id_based", action="store_true")
     mv.add_argument("--no_name_check", action="store_false", dest="name_check")
+    add_common_input(mv)
     rn = mod_sub.add_parser("rename")
     rn.add_argument("item"); rn.add_argument("new_name"); add_common_db(rn)
     rn.add_argument("--id_based", action="store_true")
     rn.add_argument("--mode", choices=["D", "N", "B", "A"], default="D", dest="name_mode")
     rn.add_argument("--no_name_check", action="store_false", dest="name_check")
+    add_common_input(rn)
     mk = mod_sub.add_parser("makefolder")
     mk.add_argument("folder_name"); add_common_db(mk)
     mk.add_argument("--parent", default="."); mk.add_argument("--id_based", action="store_true")
     mk.add_argument("--no_name_check", action="store_false", dest="name_check")
+    add_common_input(mk)
 
     # Volume Packaging
     subparsers.add_parser("makepkg").add_argument("volume_name")
@@ -182,7 +190,17 @@ async def run_cli(args_list=None):
             uploader = UPLOAD(meta, mang, utils, eup, log, ba, version_manager, sema)
             if args.minimize == "yes" and args.encryption_mode == "not_automatic":
                 args.encryption_mode = "automatic"; args.password_seed = None; args.random_seed = False
-            await uploader.uploada(interaction=ph, local_path=args.local_path, DB_FILE=args.database_file, channel_id=int(args.channel_id) if args.channel_id else get_channel_id(), custom_root_name=args.upload_name, encryption_mode=args.encryption_mode, user_seed=args.password_seed, random_seed=args.random_seed, save_hash=(args.save_hash == "True"), upload_mode=args.upload_mode if args.command == "upload" else "new_version", target_item_path=args.target_item_path, new_version_string=args.new_version_string, name_check=getattr(args, "name_check", True), strictness_mode=args.strictness_mode, chunk_size_mb=args.chunk_size_mb, id_based=args.id_based, addition_mode=args.addition, source_version=args.source_version, minimize=args.minimize)
+            await uploader.uploada(
+                interaction=ph, local_path=args.local_path, DB_FILE=args.database_file, 
+                channel_id=int(args.channel_id) if args.channel_id else get_channel_id(), 
+                custom_root_name=args.upload_name, encryption_mode=args.encryption_mode, 
+                user_seed=args.password_seed, random_seed=args.random_seed, 
+                save_hash=(args.save_hash == "True"), upload_mode=args.upload_mode if args.command == "upload" else "new_version", 
+                target_item_path=args.target_item_path, new_version_string=args.new_version_string, 
+                name_check=getattr(args, "name_check", True), strictness_mode=args.strictness_mode, 
+                chunk_size_mb=args.chunk_size_mb, id_based=args.id_based, 
+                addition_mode=args.addition, source_version=args.source_version, minimize=args.minimize
+            )
         elif args.command == "download":
             from download import DownloadContext
             import json
@@ -190,17 +208,33 @@ async def run_cli(args_list=None):
             try: pwd_dict = json.loads(args.passwords)
             except: pass
             ctx = DownloadContext(bot, file_table_columns, log, interaction=ph, enc=True)
-            await ctx.downloada(target_path=args.target_path, DB_FILE=args.database_file, download_folder=args.download_folder, decryption_password_seed=pwd_dict, version_param=args.version, all_versions_param=(args.all_versions == "yes"), strictness_mode=args.strictness_mode, id_based=args.id_based)
+            await ctx.downloada(
+                target_path=args.target_path, DB_FILE=args.database_file, 
+                download_folder=args.download_folder, decryption_password_seed=pwd_dict, 
+                version_param=args.version, start_version_param=args.st_version, 
+                end_version_param=args.en_version, all_versions_param=(args.all_versions == "yes"), 
+                strictness_mode=args.strictness_mode, id_based=args.id_based
+            )
         elif args.command == "delete":
             from delete import DeleteContext
             ctx = DeleteContext(bot=bot, file_table_columns=file_table_columns, log=log, intents=intents, interaction=ph)
-            await ctx.deletea(target_path=args.target_path, DB_FILE=args.database_file, nuke=args.nuke, all_versions_param=(args.all_versions == "yes"), id_based=args.id_based, delete_type=getattr(args, "delete_type", "soft"))
+            await ctx.deletea(
+                target_path=args.target_path, DB_FILE=args.database_file, 
+                nuke=args.nuke, version_param=args.version, 
+                start_version_param=args.start_version, end_version_param=args.end_version,
+                all_versions_param=(args.all_versions == "yes"), id_based=args.id_based, 
+                delete_type=getattr(args, "delete_type", "soft"),
+                skip_confirmation=(args.skip_confirmation == "yes")
+            )
         elif args.command == "modify":
             from modify import ModifyContext
             ctx = ModifyContext(bot, file_table_columns, log, ph)
-            if args.modify_command == "move": await ctx.movea(from_path=args.src, to_path=args.dst, DB_FILE=args.database_file, copy_mode=args.copy_mode, id_based=args.id_based, name_check=getattr(args, "name_check", True), src_id_based=getattr(args, "src_id_based", False), dst_id_based=getattr(args, "dst_id_based", False))
-            elif args.modify_command == "rename": await ctx.renamea(item_path=args.item, new_name=args.new_name, name_mode=getattr(args, "name_mode", "D"), id_based=args.id_based, name_check=getattr(args, "name_check", True), DB_FILE=args.database_file)
-            elif args.modify_command == "makefolder": await ctx.makefoldera(folder_name=args.folder_name, DB_FILE=args.database_file, parent_path=args.parent, id_based=args.id_based, name_check=getattr(args, "name_check", True))
+            if args.modify_command == "move": 
+                await ctx.movea(from_path=args.src, to_path=args.dst, DB_FILE=args.database_file, copy_mode=args.copy_mode, id_based=args.id_based, name_check=getattr(args, "name_check", True), src_id_based=getattr(args, "src_id_based", False), dst_id_based=getattr(args, "dst_id_based", False))
+            elif args.modify_command == "rename": 
+                await ctx.renamea(item_path=args.item, new_name=args.new_name, name_mode=getattr(args, "name_mode", "D"), id_based=args.id_based, name_check=getattr(args, "name_check", True), DB_FILE=args.database_file)
+            elif args.modify_command == "makefolder": 
+                await ctx.makefoldera(folder_name=args.folder_name, DB_FILE=args.database_file, parent_path=args.parent, id_based=args.id_based, name_check=getattr(args, "name_check", True))
         elif args.command == "makepkg":
             import volume_manager
             package_path = volume_manager.make_package(args.volume_name)

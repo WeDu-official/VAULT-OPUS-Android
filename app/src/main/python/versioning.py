@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#versioning.py (ASRAFIL) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#versioning.py (ASRAFIL) from the VAULT OPUS PROJECT version 1-beta-release-4
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless

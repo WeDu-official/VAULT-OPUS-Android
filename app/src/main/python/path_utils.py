@@ -22,18 +22,26 @@ def get_android_writable_dir():
     return cwd
 
 ANDROID_WRITABLE_DIR = get_android_writable_dir()
+ANDROID_DOWNLOAD_DIR = "/storage/emulated/0/Download"
+ANDROID_DOCUMENTS_DIR = "/storage/emulated/0/Documents"
 
 def normalize_path(path_str):
     """Ensures a path is absolute and points to a writable location on Android."""
     if not path_str:
         return ANDROID_WRITABLE_DIR
         
-    if os.path.isabs(path_str) and os.path.dirname(path_str) == '/':
-        path_str = os.path.basename(path_str)
-
     if os.path.isabs(path_str):
+        # On Android, if it's a root-relative path like "/Download", try to map it to public storage
+        if path_str.startswith("/Download"):
+            return os.path.join("/storage/emulated/0", path_str.lstrip("/"))
+        if path_str.startswith("/Documents"):
+            return os.path.join("/storage/emulated/0", path_str.lstrip("/"))
         return os.path.abspath(os.path.normpath(path_str))
-        
+
+    # If it's a common relative path, map to public storage
+    if path_str.lower().startswith("download"):
+         return os.path.abspath(os.path.join("/storage/emulated/0", path_str))
+
     return os.path.abspath(os.path.join(ANDROID_WRITABLE_DIR, os.path.normpath(path_str)))
 
 def get_db_path(db_name):

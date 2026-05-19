@@ -1,4 +1,5 @@
-//RenameVolumeModal.jsx
+// RenameVolumeModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import { Edit2, Save, X } from 'lucide-react';
 

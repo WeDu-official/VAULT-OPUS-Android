@@ -1,4 +1,5 @@
-//Actionbar.jsx
+// ActionBar.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useRef } from 'react';
 import FolderPicker from './FolderPicker';
 import GeneratedPasswordModal from './GeneratedPasswordModal';
@@ -138,8 +139,8 @@ export default function ActionBar({ onUpload, onDownload, onDeleteRequest, selec
                       <input
                         type="text"
                         readOnly
-                        value={uploadPaths.length > 0 
-                          ? `${uploadPaths.length} item(s) selected: ${uploadPaths[0]}${uploadPaths.length > 1 ? '...' : ''}` 
+                        value={uploadPaths.length > 0
+                          ? `${uploadPaths.length} item(s) selected: ${uploadPaths[0]}${uploadPaths.length > 1 ? '...' : ''}`
                           : ''}
                         placeholder="Select files or folders..."
                         className="flex-1 bg-[#060d1a] border border-[#1a3a5c] rounded px-3 py-2 text-sm focus:border-[#3bb5ff] outline-none placeholder-gray-600 text-gray-200 cursor-default"
@@ -276,7 +277,7 @@ export default function ActionBar({ onUpload, onDownload, onDeleteRequest, selec
 
                   {/* Zero Knowledge Encryption Checkbox - Only show if not automatic */}
                   {encryption === 'not_automatic' && (
-                    <label 
+                    <label
                       className="flex items-center gap-2 px-3 py-2 bg-[#0f1f3a] border border-[#1a3a5c] rounded cursor-pointer hover:bg-[#1a3a5c] transition-all duration-150 active:scale-95"
                       style={{ opacity: minimize ? 0.5 : 1, pointerEvents: minimize ? 'none' : 'auto' }}
                     >

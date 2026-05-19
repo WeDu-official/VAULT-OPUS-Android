@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#encrytion.py (for downloadtools) (BAAL) from the VAULT OPUS PROJECT version 1-beta-5-15-2026
+#encrytion.py (for downloadtools) (BAAL) from the VAULT OPUS PROJECT version 1-beta-release-4
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -38,18 +38,11 @@ class denc:
 
     def initialize_for_volume(self, db_path: str):
         """Initializes salt and info for the specific volume database."""
-        import sys
-        import os
-        parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-
         from config_manager import get_salt, get_info
-        from path_utils import get_db_path
-        self.db_path = get_db_path(db_path)
+        self.db_path = db_path
         try:
-            self.salt = get_salt(self.db_path)
-            self.info = get_info(self.db_path)
+            self.salt = get_salt(db_path)
+            self.info = get_info(db_path)
         except Exception as e:
             self.log.warning(f"Could not load encryption config for {db_path}: {e}")
 

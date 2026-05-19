@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#upload_utils.py (Samyaza) from the VAULT OPUS PROJECT version 1-beta-2-release
+#upload_utils.py (Samyaza) from the VAULT OPUS PROJECT version 1-beta-release-5
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -23,10 +23,14 @@ class UploadUtils:
             return True
         else:
             return False
-    def _resolve_file_nickname(self, file_path: str, root_upload_name: str,
-                               is_top_level: bool, is_nicknamed_flag: bool) -> tuple[str, str, bool]:
+    async def _resolve_file_nickname(self, file_path: str, root_upload_name: str,
+                               is_top_level: bool, is_nicknamed_flag: bool,
+                               db_file: str = "", parent_id: str = "",
+                               is_new_upload: bool = True) -> tuple[str, str, bool]:
         """
         Determines the final filename for DB, handles nicknaming if needed.
+        For new uploads, guarantees the resulting nickname is unique within the same
+        parent folder (relative_path_in_archive == parent_id) by looping until unique.
         Returns: (final_base_filename_for_db, original_base_filename_for_db, is_base_filename_nicknamed_flag)
         """
         original_name = os.path.basename(file_path)
@@ -35,12 +39,22 @@ class UploadUtils:
         is_nicknamed_flag_for_db = False
 
         if is_top_level and is_nicknamed_flag:
+            # Top-level files already have their root name determined by _determine_root_name
+            # which already guarantees uniqueness — no extra check needed here.
             final_name = root_upload_name
             original_for_db = original_name
             is_nicknamed_flag_for_db = True
             self.log.info(f"Top-level file '{original_name}' nicknamed to '{root_upload_name}'.")
         elif len(original_name) > 60:
-            final_name = self.encry._generate_random_nickname_seed()
+            # Auto-nickname with random string — loop until unique within the parent folder
+            if is_new_upload and db_file and parent_id is not None:
+                while True:
+                    candidate = self.encry._generate_random_nickname_seed()
+                    if not await self._name_exists_in_parent(db_file, parent_id, candidate):
+                        final_name = candidate
+                        break
+            else:
+                final_name = self.encry._generate_random_nickname_seed()
             original_for_db = original_name
             is_nicknamed_flag_for_db = True
             self.log.info(f"File name '{original_name}' >60 chars. Auto-nicknamed to '{final_name}'.")
@@ -154,19 +168,39 @@ class UploadUtils:
             file_size = os.path.getsize(local_path)
             total_parts = max((file_size + chunk_size - 1) // chunk_size, 1)
         return total_parts
-    async def _process_subfolder(self, root_upload_name: str, 
+    async def _name_exists_in_parent(self, db_file: str, parent_id: str, name: str) -> bool:
+        """
+        Returns True if any entry within the given parent folder (relative_path_in_archive == parent_id)
+        already has base_filename == name.
+        """
+        entries = await self.db._db_read_sync(db_file, {"relative_path_in_archive": parent_id})
+        for e in entries:
+            if e.get('base_filename', '') == name:
+                return True
+        return False
+
+    async def _process_subfolder(self, root_upload_name: str,
                              folder_relative_path: str,
-                             dir_name: str, DB_FILE: str, 
+                             dir_name: str, DB_FILE: str,
                              is_nicknamed_flag: bool, encryption_mode: str,
                              encryption_key: Optional[bytes], password_seed_hash: str,
                              store_hash_flag: bool, version: str,
-                             itemid: str) -> str:
+                             itemid: str,
+                             is_new_upload: bool = True) -> str:
         nicknamed_name = dir_name
         is_dir_nicknamed = False
         original_name_for_db = dir_name
 
         if len(dir_name) > 60:
-            nicknamed_name = self.encry._generate_random_nickname_seed()
+            # Auto-nickname with random string — loop until unique within the parent folder
+            if is_new_upload:
+                while True:
+                    candidate = self.encry._generate_random_nickname_seed()
+                    if not await self._name_exists_in_parent(DB_FILE, folder_relative_path, candidate):
+                        nicknamed_name = candidate
+                        break
+            else:
+                nicknamed_name = self.encry._generate_random_nickname_seed()
             is_dir_nicknamed = True
             original_name_for_db = dir_name
 

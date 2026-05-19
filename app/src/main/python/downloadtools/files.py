@@ -430,10 +430,10 @@ class files:
 
         # Get channel
         if channel_id != 0:
-            channel = self.get_channel(channel_id)
+            channel = self.bot.get_channel(channel_id)
             if not channel:
                 try:
-                    channel = await self.fetch_channel(channel_id)
+                    channel = await self.bot.fetch_channel(channel_id)
                 except Exception as e:
                     self.log.error(f"Error fetching channel {channel_id}: {e}. Cannot download parts.")
                     await interaction.send(

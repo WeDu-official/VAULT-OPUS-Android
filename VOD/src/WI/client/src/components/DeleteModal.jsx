@@ -1,4 +1,5 @@
-//DeleteModal.jsx
+// DeleteModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 
 export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, selectedItems = [], selectedDb, currentPath, onAlert, showVersionControls = false }) {
@@ -7,7 +8,7 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
   const [version, setVersion] = useState('');
   const [startVersion, setStartVersion] = useState('');
   const [endVersion, setEndVersion] = useState('');
-  
+
   const [availableVersions, setAvailableVersions] = useState([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [error, setError] = useState(null);
@@ -22,10 +23,10 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
     try {
       setLoadingVersions(true);
       setError(null);
-      
+
       const item = selectedItems[0];
       let itemid = item.itemid;
-      
+
       // If we don't have itemid directly, we might need to fetch it via path
       if (!itemid) {
         const itemPath = currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`;
@@ -34,7 +35,7 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
         );
         if (!pathResponse.ok) throw new Error('Failed to fetch item details');
         const pathData = await pathResponse.json();
-        
+
         if (pathData.results) {
           const keys = Object.keys(pathData.results);
           if (keys.length > 0) itemid = keys[0];
@@ -84,7 +85,7 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
         .map(v => v.version);
 
       setAvailableVersions(sortedVersions);
-      
+
       // Auto-select latest version for specific delete
       if (sortedVersions.length > 0) {
         setVersion(sortedVersions[0]);
@@ -104,7 +105,7 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
       onAlert("Please select a specific version to delete.", "Missing Version");
       return;
     }
-    
+
     if (scope === 'range' && (!startVersion || !endVersion)) {
       onAlert("Please select both a start and end version for the range.", "Missing Version Range");
       return;
@@ -150,23 +151,21 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
               <div className="grid grid-cols-1 gap-2">
                 <button
                   onClick={() => setScope('all')}
-                  className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
-                    scope === 'all' 
-                      ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]' 
-                      : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                  }`}
+                  className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${scope === 'all'
+                    ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]'
+                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                    }`}
                 >
                   <div className="font-medium">All Versions</div>
                   <div className="text-xs opacity-60">Delete every version of this item</div>
                 </button>
-                
+
                 <button
                   onClick={() => setScope('specific')}
-                  className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
-                    scope === 'specific' 
-                      ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]' 
-                      : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                  }`}
+                  className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${scope === 'specific'
+                    ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]'
+                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                    }`}
                 >
                   <div className="font-medium">Specific Version</div>
                   <div className="text-xs opacity-60">Only delete one version</div>
@@ -195,11 +194,10 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
 
                 <button
                   onClick={() => setScope('range')}
-                  className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
-                    scope === 'range' 
-                      ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]' 
-                      : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                  }`}
+                  className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${scope === 'range'
+                    ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]'
+                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                    }`}
                 >
                   <div className="font-medium">Version Range</div>
                   <div className="text-xs opacity-60">Delete a sequence of versions</div>
@@ -259,16 +257,15 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
                   checked={type === 'soft'}
                   onChange={() => setType('soft')}
                 />
-                <div className={`p-3 rounded-xl border text-center transition-all duration-200 ${
-                  type === 'soft' 
-                    ? 'bg-green-500/10 border-green-500/50 text-green-400' 
-                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-green-500/30'
-                }`}>
+                <div className={`p-3 rounded-xl border text-center transition-all duration-200 ${type === 'soft'
+                  ? 'bg-green-500/10 border-green-500/50 text-green-400'
+                  : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-green-500/30'
+                  }`}>
                   <div className="text-sm font-bold">SOFT DELETE</div>
                   <div className="text-[10px] opacity-70">Database only</div>
                 </div>
               </label>
-              
+
               <label className="flex-1 cursor-pointer group">
                 <input
                   type="radio"
@@ -277,11 +274,10 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
                   checked={type === 'hard'}
                   onChange={() => setType('hard')}
                 />
-                <div className={`p-3 rounded-xl border text-center transition-all duration-200 ${
-                  type === 'hard' 
-                    ? 'bg-red-500/10 border-red-500/50 text-red-400' 
-                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-red-500/30'
-                }`}>
+                <div className={`p-3 rounded-xl border text-center transition-all duration-200 ${type === 'hard'
+                  ? 'bg-red-500/10 border-red-500/50 text-red-400'
+                  : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-red-500/30'
+                  }`}>
                   <div className="text-sm font-bold">HARD DELETE</div>
                   <div className="text-[10px] opacity-70">Remove attachments</div>
                 </div>
@@ -300,11 +296,10 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, itemName, sele
           <button
             onClick={handleConfirm}
             disabled={loadingVersions && scope !== 'all'}
-            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-              type === 'hard' 
-                ? 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]' 
-                : 'bg-[#3bb5ff] hover:bg-[#2e9ee6] text-[#060d1a] shadow-[0_0_20px_rgba(59,181,255,0.3)]'
-            }`}
+            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${type === 'hard'
+              ? 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+              : 'bg-[#3bb5ff] hover:bg-[#2e9ee6] text-[#060d1a] shadow-[0_0_20px_rgba(59,181,255,0.3)]'
+              }`}
           >
             Confirm Deletion
           </button>

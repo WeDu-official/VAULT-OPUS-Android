@@ -1,4 +1,5 @@
-//PasswordPromptModal.jsx
+// PasswordPromptModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 
 export default function PasswordPromptModal({ items, onSubmit, onCancel }) {

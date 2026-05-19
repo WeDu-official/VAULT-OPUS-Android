@@ -1,4 +1,5 @@
-//MakeFolderModal.jsx
+// MakeFolderModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 import ArchiveFolderPicker from './ArchiveFolderPicker';
 
@@ -72,19 +73,19 @@ export default function MakeFolderModal({ selectedDb, currentPath, onConfirm, on
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Parent Location</label>
             {showFolderPicker ? (
               <div className="max-h-[300px] overflow-hidden border border-[#1a3a5c] rounded-lg bg-[#060d1a]">
-                <ArchiveFolderPicker 
-                  selectedDb={selectedDb} 
+                <ArchiveFolderPicker
+                  selectedDb={selectedDb}
                   onSelect={(path) => {
                     setSelectedParent(path);
                     setParentLabel(path === '.' ? 'Root' : path);
                     setShowFolderPicker(false);
-                  }} 
+                  }}
                   initialPath={selectedParent}
                 />
               </div>
             ) : (
               <div className="flex gap-2">
-                <div 
+                <div
                   className="flex-1 bg-[#060d1a] border border-[#1a3a5c] rounded-lg px-4 py-2.5 text-sm text-gray-300 cursor-pointer hover:border-[#3bb5ff]/50 transition-colors truncate"
                   onClick={() => setShowFolderPicker(true)}
                 >

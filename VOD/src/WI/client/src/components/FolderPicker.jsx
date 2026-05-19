@@ -1,4 +1,5 @@
-//FolderPicker.jsx
+// FolderPicker.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect, useRef } from 'react';
 import { Folder, Home, Check, FileText } from 'lucide-react';
 
@@ -150,8 +151,8 @@ const FolderPicker = ({ initialPath, onSelect, onCancel, showFiles = false, mult
               >
                 {multiple && item.name !== '..' && (
                   <div className={`w-4 h-4 border rounded flex items-center justify-center transition-all duration-100 
-                    ${selectedItems.has(item.path) 
-                      ? 'bg-[#3bb5ff] border-[#3bb5ff] text-white' 
+                    ${selectedItems.has(item.path)
+                      ? 'bg-[#3bb5ff] border-[#3bb5ff] text-white'
                       : 'border-[#1a3a5c] group-hover:border-[#3bb5ff]/50'
                     }`}
                   >
@@ -159,9 +160,9 @@ const FolderPicker = ({ initialPath, onSelect, onCancel, showFiles = false, mult
                   </div>
                 )}
                 {item.is_dir ? (
-                  <Folder 
-                    size={16} 
-                    className={item.name === '..' ? 'text-gray-500' : 'text-[#3bb5ff] flex-shrink-0'} 
+                  <Folder
+                    size={16}
+                    className={item.name === '..' ? 'text-gray-500' : 'text-[#3bb5ff] flex-shrink-0'}
                   />
                 ) : (
                   <FileText size={16} className={`flex-shrink-0 ${showFiles ? 'text-gray-400 group-hover:text-[#3bb5ff]' : 'text-gray-600'}`} />
@@ -187,8 +188,8 @@ const FolderPicker = ({ initialPath, onSelect, onCancel, showFiles = false, mult
           className="flex-1 px-3 py-1.5 text-xs bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] hover:from-[#005a9e] hover:to-[#2aa5ef] active:from-[#004a8e] active:to-[#1a95df] text-white rounded flex items-center justify-center gap-1.5 transition-all duration-100 shadow-lg shadow-[#3bb5ff]/20 whitespace-nowrap"
         >
           <Check size={14} />
-          {multiple && selectedItems.size > 0 
-            ? `Select ${selectedItems.size} items` 
+          {multiple && selectedItems.size > 0
+            ? `Select ${selectedItems.size} items`
             : (selectedItems.size > 0 ? 'Select Item' : 'Select Current Folder')
           }
         </button>

@@ -1,4 +1,5 @@
-//NewVersionUploadModal.jsx
+// NewVersionUploadModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import FolderPicker from './FolderPicker';
 import GeneratedPasswordModal from './GeneratedPasswordModal';
@@ -175,8 +176,8 @@ export default function NewVersionUploadModal({ targetItemPath, selectedDb, onUp
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setAdditionMode(false)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded border transition-all ${!additionMode 
-                      ? 'bg-[#3bb5ff]/20 border-[#3bb5ff] text-white' 
+                    className={`flex flex-col items-center gap-1 p-2 rounded border transition-all ${!additionMode
+                      ? 'bg-[#3bb5ff]/20 border-[#3bb5ff] text-white'
                       : 'bg-[#060d1a] border-[#1a3a5c] text-gray-500 hover:border-[#1a3a5c]/80'}`}
                   >
                     <span className="text-xs font-bold">Independent</span>
@@ -184,15 +185,15 @@ export default function NewVersionUploadModal({ targetItemPath, selectedDb, onUp
                   </button>
                   <button
                     onClick={() => setAdditionMode(true)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded border transition-all ${additionMode 
-                      ? 'bg-[#3bb5ff]/20 border-[#3bb5ff] text-white' 
+                    className={`flex flex-col items-center gap-1 p-2 rounded border transition-all ${additionMode
+                      ? 'bg-[#3bb5ff]/20 border-[#3bb5ff] text-white'
                       : 'bg-[#060d1a] border-[#1a3a5c] text-gray-500 hover:border-[#1a3a5c]/80'}`}
                   >
                     <span className="text-xs font-bold">Addition</span>
                     <span className="text-[9px] opacity-60">Keep Previous</span>
                   </button>
                 </div>
-                
+
                 {additionMode && (
                   <div className="pt-2 animate-in slide-in-from-top-1 duration-200">
                     <label className="block text-[10px] text-[#3bb5ff]/50 mb-1 uppercase">Source Version</label>
@@ -354,7 +355,7 @@ export default function NewVersionUploadModal({ targetItemPath, selectedDb, onUp
 
               {/* Zero Knowledge Encryption Checkbox - Only show if not automatic */}
               {encryption === 'not_automatic' && (
-                <label 
+                <label
                   className="flex items-center gap-2 px-3 py-2 bg-[#0f1f3a] border border-[#1a3a5c] rounded cursor-pointer hover:bg-[#1a3a5c] transition-all duration-150 active:scale-95"
                   style={{ opacity: minimize ? 0.5 : 1, pointerEvents: minimize ? 'none' : 'auto' }}
                 >

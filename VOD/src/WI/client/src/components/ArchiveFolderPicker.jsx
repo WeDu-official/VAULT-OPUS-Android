@@ -1,4 +1,5 @@
-//ArchiveFolderPicker.jsx
+// ArchiveFolderPicker.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import { Folder, Home, Check, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -26,7 +27,7 @@ const ArchiveFolderPicker = ({ selectedDb, onSelect, onCancel, initialPath = '.'
       }
 
       let folders = [];
-      
+
       // If we are at root, results contains root folders
       if (path === '.' || path === '') {
         folders = Object.values(data.results || {})

@@ -1,4 +1,5 @@
-//DownloadModal.jsx
+// DownloadModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 
 export default function DownloadModal({ isOpen, onClose, onConfirm, selectedItems = [] }) {
@@ -38,23 +39,21 @@ export default function DownloadModal({ isOpen, onClose, onConfirm, selectedItem
             <div className="grid grid-cols-1 gap-2">
               <button
                 onClick={() => setStrictnessMode('NA')}
-                className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
-                  strictnessMode === 'NA' 
-                    ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]' 
-                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                }`}
+                className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${strictnessMode === 'NA'
+                  ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]'
+                  : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                  }`}
               >
                 <div className="font-medium">NOT ATOMIC (DEFAULT)</div>
                 <div className="text-xs opacity-60">Continue downloading on failure</div>
               </button>
-              
+
               <button
                 onClick={() => setStrictnessMode('SA')}
-                className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
-                  strictnessMode === 'SA' 
-                    ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]' 
-                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                }`}
+                className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${strictnessMode === 'SA'
+                  ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]'
+                  : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                  }`}
               >
                 <div className="font-medium">SOFT ATOMIC</div>
                 <div className="text-xs opacity-60">Stop immediately, ask before cleanup</div>
@@ -62,11 +61,10 @@ export default function DownloadModal({ isOpen, onClose, onConfirm, selectedItem
 
               <button
                 onClick={() => setStrictnessMode('HA')}
-                className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
-                  strictnessMode === 'HA' 
-                    ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]' 
-                    : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
-                }`}
+                className={`px-4 py-3 rounded-xl border text-left transition-all duration-200 ${strictnessMode === 'HA'
+                  ? 'bg-[#1a3a5c]/40 border-[#3bb5ff] text-white shadow-[0_0_15px_rgba(59,181,255,0.2)]'
+                  : 'bg-[#0d1b2e] border-[#1a3a5c] text-gray-400 hover:border-[#3bb5ff]/50'
+                  }`}
               >
                 <div className="font-medium">HARD ATOMIC</div>
                 <div className="text-xs opacity-60">Stop immediately, auto-cleanup</div>
