@@ -1,4 +1,4 @@
-// Sidebar.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// Sidebar.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 // ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import { Database, Plus, Edit2, ChevronRight, X, FolderOpen, History, LayoutGrid, Trash2, Share2, ExternalLink, RefreshCw, Bomb } from 'lucide-react';

@@ -258,7 +258,7 @@ const castConfigTypes = (base, override) => {
 
 function SettingsTabContent({ config, fetchConfig, showToast }) {
   const [localConfig, setLocalConfig] = useState(null);
-  const [downloadFolder, setDownloadFolder] = useState(localStorage.getItem('VAULT_OPUS_download_folder') || './downloads');
+  const [downloadFolder, setDownloadFolder] = useState(localStorage.getItem('VAULT_OPUS_download_folder') || '/storage/emulated/0/Download');
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
@@ -419,7 +419,7 @@ export default function App() {
   const [terminalOutput, setTerminalOutput] = useState('');
   const [queue, setQueue] = useState([]);
   const [config, setConfig] = useState(null);
-  const [promptData, setPromptData] = useState(null);
+  const [promptQueue, setPromptQueue] = useState([]);
   const [bottomSheet, setBottomSheet] = useState(null);
   const [modal, setModal] = useState(null);
   const [showCreateVolume, setShowCreateVolume] = useState(false);
@@ -432,8 +432,12 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [volumeError, setVolumeError] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
+  const retryCountRef = useRef(0);
+  const maxRetries = 10;
+  const retryInterval = 2000;
 
   const showToast = (msg, type = 'info') => setToast({ message: msg, type, key: Date.now() });
 
@@ -454,6 +458,11 @@ export default function App() {
       setTerminalOutput(p => p + '\n[Connected to VAULT OPUS CLI]\n');
       // Fetch initial data once connected
       fetchDbs(); fetchConfig(); fetchRecentVolumes(); fetchSetupStatus();
+
+      // Fix: If a volume is pre-selected, try to load its files once connected
+      if (localStorage.getItem('mob_selectedDb')) {
+        setTimeout(() => fetchFiles('.', null), 500);
+      }
     };
 
     socket.onmessage = e => {
@@ -474,7 +483,7 @@ export default function App() {
       } else if (msg.type === 'status') {
         setQueue(q => q.map(i => i.id === tid ? { ...i, status: line.includes('Queued') ? 'queued' : 'running' } : i));
       } else if (msg.type === 'prompt') {
-        setPromptData({ text: msg.prompt, isPassword: msg.is_password, taskId: tid });
+        setPromptQueue(prev => [...prev, { text: msg.prompt, isPassword: msg.is_password, taskId: tid }]);
       } else if (msg.type === 'exit') {
         setTerminalOutput(p => p + `\n[Process ${tid} exited with code: ${msg.code}]\n`);
         setQueue(q => q.map(i => i.id === tid ? { ...i, status: msg.code === 0 ? 'completed' : 'failed', progress: msg.code === 0 ? 100 : i.progress } : i));
@@ -550,21 +559,77 @@ export default function App() {
     if (!selectedDb) return;
     setVolumeError(null);
     try {
-      let url = `/api/listfiles?db=${encodeURIComponent(selectedDb)}&path=${encodeURIComponent(path)}`;
+      // Normalize db name: preserve path if absolute, ensure .db extension
+      const isAbsolute = selectedDb.startsWith('/') || selectedDb.includes(':\\');
+      const dbParam = isAbsolute
+        ? (selectedDb.endsWith('.db') ? selectedDb : `${selectedDb}.db`)
+        : selectedDb.split(/[\/\\]/).pop().endsWith('.db') ? selectedDb.split(/[\/\\]/).pop() : `${selectedDb.split(/[\/\\]/).pop()}.db`;
+
+      let url = `/api/listfiles?db=${encodeURIComponent(dbParam)}&path=${encodeURIComponent(path)}`;
       if (version) url += `&version=${encodeURIComponent(version)}`;
       const r = await fetch(url);
-      if (!r.ok) { setVolumeError("This volume doesn't exist"); setTree(null); return; }
       const data = await r.json();
-      if (data.error || (data.results && Object.keys(data.results).length === 0 && path === '.')) {
-        try {
-          const checkR = await fetch(`/api/dbs`);
-          const checkData = await checkR.json();
-          const availableDbs = checkData.dbs || [];
-          if (!availableDbs.includes(selectedDb)) { setVolumeError("This volume doesn't exist"); setTree(null); return; }
-        } catch (_) { }
+
+      if (!r.ok || data.error) {
+        // If it's a "not found" error, it's likely a real issue, not a race condition
+        if (path !== '.' && (data.error?.toLowerCase().includes('not found') || !r.ok)) {
+          setCurrentPath('.');
+          fetchFiles('.');
+          return;
+        }
+
+        // Handle possible race condition on root path
+        if (path === '.') {
+          try {
+            const checkR = await fetch(`/api/dbs`);
+            const checkData = await checkR.json();
+            const availableDbs = checkData.dbs || [];
+
+            const normalizedSelected = dbParam.split(/[\/\\]/).pop();
+            const normalizedAvailable = availableDbs.map(db => db.split(/[\/\\]/).pop());
+            const isExternal = externalVolumes.some(ext => {
+              const extBase = ext.split(/[\/\\]/).pop();
+              return ext === dbParam || extBase === normalizedSelected;
+            });
+
+            if (!normalizedAvailable.includes(normalizedSelected) && !isExternal) {
+              setVolumeError("This volume doesn't exist");
+              setTree(null);
+              retryCountRef.current = 0; // Don't retry if it definitely doesn't exist
+              return;
+            }
+          } catch (_) { }
+
+          // If we reach here, it might just be the server starting up
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++;
+            setIsRetrying(true);
+            setTimeout(() => fetchFiles(path, version), retryInterval);
+            return;
+          }
+        }
+
+        setVolumeError(data.error || "Error accessing volume");
+        setTree(null);
+        setIsRetrying(false);
+        retryCountRef.current = 0;
+        return;
       }
       setTree(data);
-    } catch (e) { setVolumeError("This volume doesn't exist"); setTree(null); }
+      setIsRetrying(false);
+      retryCountRef.current = 0;
+    } catch (e) {
+      if (retryCountRef.current < maxRetries) {
+        retryCountRef.current++;
+        setIsRetrying(true);
+        setTimeout(() => fetchFiles(path, version), retryInterval);
+      } else {
+        setVolumeError("Could not connect to volume");
+        setTree(null);
+        setIsRetrying(false);
+        retryCountRef.current = 0;
+      }
+    }
   };
   const fetchSetupStatus = async () => {
     try {
@@ -578,10 +643,26 @@ export default function App() {
   useEffect(() => { fetchDbs(); fetchConfig(); fetchRecentVolumes(); fetchSetupStatus(); }, []);
   useEffect(() => {
     if (selectedDb) {
-      localStorage.setItem('mob_selectedDb', selectedDb);
-      updateRecentVolumes(prev => [selectedDb, ...prev.filter(db => db !== selectedDb)].slice(0, 10));
+      // Normalize: preserve path if absolute, ensure .db extension
+      const isAbsolute = selectedDb.startsWith('/') || selectedDb.includes(':\\');
+      const dbWithExt = isAbsolute
+        ? (selectedDb.endsWith('.db') ? selectedDb : `${selectedDb}.db`)
+        : (selectedDb.split(/[\/\\]/).pop().endsWith('.db') ? selectedDb.split(/[\/\\]/).pop() : `${selectedDb.split(/[\/\\]/).pop()}.db`);
+
+      if (dbWithExt !== selectedDb) {
+        setSelectedDb(dbWithExt);
+        return;
+      }
+
+      localStorage.setItem('mob_selectedDb', dbWithExt);
+      updateRecentVolumes(prev => [dbWithExt, ...prev.filter(db => db !== dbWithExt)].slice(0, 10));
       setCurrentVersion(null);
-      fetchFiles(currentPath);
+      setCurrentPath('.');
+      const load = async () => {
+        await fetchDbs();
+        fetchFiles('.', null);
+      };
+      load();
     }
   }, [selectedDb]);
 
@@ -793,7 +874,7 @@ export default function App() {
     }, [itemPath]);
 
     const handleDownload = () => {
-      const args = ['download', itemPath, '-db', selectedDb, '--download_folder', localStorage.getItem('VAULT_OPUS_download_folder') || './downloads'];
+      const args = ['download', itemPath, '-db', selectedDb, '--download_folder', localStorage.getItem('VAULT_OPUS_download_folder') || '/storage/emulated/0/Download'];
       if (allVersions) args.push('--all_versions', 'yes');
       else if (startVersion && endVersion) args.push('--st_version', startVersion, '--en_version', endVersion);
       else if (versionInput) args.push('--version', versionInput);
@@ -1071,6 +1152,10 @@ export default function App() {
     }
 
     const handleSubmit = () => {
+      if (type === 'rename' && !newName.trim()) {
+        showToast('New name cannot be empty', 'error');
+        return;
+      }
       if (type === 'move') {
         onConfirm({
           type: 'move',
@@ -1194,6 +1279,9 @@ export default function App() {
     const startUpload = () => {
       if (localPaths.length === 0) { showToast('Select at least one file/folder', 'error'); return; }
       let finalPassword = password;
+      if (encryption === 'not_automatic' && !minimize) {
+        if (!password && !randomSeed) { showToast('Provide password or select Random', 'error'); return; }
+      }
       if (encryption === 'not_automatic' && randomSeed && !showPassword) {
         const p = genPass();
         setPassword(p);
@@ -1275,12 +1363,34 @@ export default function App() {
 
   const PasswordPromptModalContent = ({ items: pwdItems, onConfirm }) => {
     const [passwords, setPasswords] = useState({});
+
+    const groupedItems = pwdItems.reduce((acc, item) => {
+      const key = item.hash || item.id;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+
+    const handleChange = (groupId, val) => {
+      setPasswords(prev => {
+        const next = { ...prev };
+        groupedItems[groupId].forEach(item => {
+          next[item.id] = val;
+        });
+        return next;
+      });
+    };
+
     return (
       <div className="space-y-4">
-        {pwdItems.map(item => (
-          <div key={item.id}>
-            <label className="text-xs text-gray-500 uppercase">{item.name}</label>
-            <input type="password" value={passwords[item.id] || ''} onChange={e => setPasswords(prev => ({ ...prev, [item.id]: e.target.value }))} className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm mt-1" />
+        {Object.entries(groupedItems).map(([groupId, itemsInGroup]) => (
+          <div key={groupId} className="bg-[#0a1628] rounded-xl p-3 border border-[#1a3a5c]">
+            <div className="max-h-24 overflow-y-auto mb-2 space-y-1">
+              {itemsInGroup.map(item => (
+                <div key={item.id} className="text-xs text-gray-400 truncate">{item.name}</div>
+              ))}
+            </div>
+            <input type="password" placeholder="Enter password..." onChange={e => handleChange(groupId, e.target.value)} className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-[#3bb5ff]" />
           </div>
         ))}
         <button onClick={() => onConfirm(passwords)} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Download</button>
@@ -1449,7 +1559,7 @@ export default function App() {
     <div className="space-y-2">
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'New Version', content: <NewVersionUploadModalContent targetItemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} onUpload={() => { }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.plus} Upload New Version</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Versions', content: <SeeVersionsModalContent itemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} onClose={() => setModal(null)} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.clock} See Versions</button>
-      <button onClick={() => { setBottomSheet(null); setModal({ title: 'Download Version', content: <DownloadVersionModalContent itemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} item={item} onDownload={(args) => { if (args) { runCmd(args, item.displayName, 'download'); setModal(null); showToast('Download queued', 'success'); } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.download} Download Version</button>
+      <button onClick={() => { setBottomSheet(null); setModal({ title: 'Download Version', content: <DownloadVersionModalContent itemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} item={item} onDownload={(args) => { if (args) { const isEncrypted = item && (item.encryption === 'not_automatic' || item.encryption_mode === 'not_automatic'); if (isEncrypted) { setModal({ title: 'Passwords Required', content: <PasswordPromptModalContent items={[{ id: item.itemid, name: item.displayName, hash: item.password_seed_hash || '' }]} onConfirm={(passwords) => { setModal(null); const finalArgs = [...args]; if (Object.keys(passwords).length) { finalArgs.push('--passwords', JSON.stringify(passwords)); } runCmd(finalArgs, item.displayName, 'download'); showToast('Download queued', 'success'); }} /> }); } else { runCmd(args, item.displayName, 'download'); setModal(null); showToast('Download queued', 'success'); } } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.download} Download Version</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Move / Copy', content: <ModifyModalContent type="move" item={item} onConfirm={(data) => { if (data) { const args = ['modify', data.type]; if (data.type === 'move') { args.push(data.src, data.dst); if (data.copyMode) args.push('--copy'); if (data.srcIdBased) args.push('--src_id_based'); if (data.dstIdBased) args.push('--dst_id_based'); } else { args.push(data.item, data.newName); if (data.nameMode !== 'D') args.push('--mode', data.nameMode); } args.push('-db', selectedDb); if (data.type !== 'move' && data.idBased) args.push('--id_based'); if (!data.nameCheck) args.push('--no_name_check'); runCmd(args, item.displayName, data.type); setModal(null); showToast(`${data.type} queued`, 'success'); } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.move} Move / Copy</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Rename', content: <ModifyModalContent type="rename" item={item} onConfirm={(data) => { if (data) { const args = ['modify', data.type]; args.push(data.item, data.newName); if (data.nameMode !== 'D') args.push('--mode', data.nameMode); args.push('-db', selectedDb); if (data.idBased) args.push('--id_based'); if (!data.nameCheck) args.push('--no_name_check'); runCmd(args, item.displayName, 'rename'); setModal(null); showToast('Rename queued', 'success'); } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.rename} Rename</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Delete Item', content: <DeleteModalContent singleItem={item} onConfirm={(opts) => { const a = ['delete']; if (item.itemid) a.push(item.itemid, '--id_based'); else a.push(currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`); a.push('-db', selectedDb, '--skip_confirmation', 'yes'); if (opts.type === 'hard') a.push('--hard'); if (opts.scope === 'all') a.push('--all_versions', 'yes'); else if (opts.scope === 'specific' && opts.version) a.push('--version', opts.version); else if (opts.scope === 'range' && opts.startVersion && opts.endVersion) a.push('--st_version', opts.startVersion, '--en_version', opts.endVersion); runCmd(a, item.displayName, 'delete'); setModal(null); clearSelection(); showToast('Delete queued', 'success'); }} onCancel={() => setModal(null)} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-900/30 rounded-xl text-sm text-red-400 btn-touch">{Ico.trash} Delete</button>
@@ -1473,7 +1583,7 @@ export default function App() {
 
       <div className="flex gap-2 px-3 py-3 bg-[#0a1628] border-b border-[#1a3a5c] overflow-x-auto">
         <button onClick={() => setBottomSheet({ title: 'Upload', content: <UploadForm /> })} className="p-3 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl btn-touch shadow-lg">{Ico.upload}</button>
-        <button onClick={() => { if (selectedItems.length) setModal({ title: 'Download', content: <DownloadModalContent onConfirm={(opts) => { executeDownload(selectedItems, opts.strictnessMode); setModal(null); }} onCancel={() => setModal(null)} /> }); }} disabled={!selectedItems.length} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch disabled:opacity-40">{Ico.download}</button>
+        <button onClick={() => { if (selectedItems.length) setModal({ title: 'Download', content: <DownloadModalContent onConfirm={(opts) => { executeDownload(selectedItems, opts.strictnessMode); }} onCancel={() => setModal(null)} /> }); }} disabled={!selectedItems.length} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch disabled:opacity-40">{Ico.download}</button>
         <button onClick={() => { if (selectedItems.length) setModal({ title: 'Delete', content: <DeleteModalContent singleItem={selectedItems.length === 1 ? selectedItems[0] : null} onConfirm={(opts) => { selectedItems.forEach(item => { const a = ['delete']; if (item.itemid) a.push(item.itemid, '--id_based'); else a.push(currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`); a.push('-db', selectedDb, '--skip_confirmation', 'yes'); if (opts.type === 'hard') a.push('--hard'); if (opts.scope === 'all') a.push('--all_versions', 'yes'); else if (opts.scope === 'specific' && opts.version) a.push('--version', opts.version); else if (opts.scope === 'range' && opts.startVersion && opts.endVersion) a.push('--st_version', opts.startVersion, '--en_version', opts.endVersion); runCmd(a, item.displayName, 'delete'); }); clearSelection(); setModal(null); showToast('Delete queued', 'success'); }} onCancel={() => setModal(null)} /> }); }} disabled={!selectedItems.length} className="p-3 bg-red-900/20 border border-red-900/40 text-red-400 rounded-xl btn-touch disabled:opacity-40">{Ico.trash}</button>
         <button onClick={() => setModal({ title: 'New Folder', content: <MakeFolderModalContent /> })} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch">{Ico.newFolder}</button>
         <button onClick={() => setSelectedItems([...items])} disabled={!items.length} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch disabled:opacity-40">{Ico.selectAll}</button>
@@ -1486,6 +1596,13 @@ export default function App() {
             <div className="mb-6 scale-150 text-red-500">{Ico.alert}</div>
             <p className="text-sm font-bold uppercase tracking-widest text-red-400">{volumeError}</p>
             <p className="text-xs text-gray-600 mt-2">Select a valid volume from the Volumes tab</p>
+            <button onClick={() => { retryCountRef.current = 0; fetchFiles(currentPath); }} className="mt-4 px-6 py-2 bg-[#0f1f3a] border border-[#1a3a5c] text-[#3bb5ff] rounded-xl text-sm font-bold btn-touch">Retry Connection</button>
+          </div>
+        ) : isRetrying ? (
+          <div className="flex flex-col items-center justify-center h-full py-20">
+            <div className="mb-6 animate-spin text-[#3bb5ff]">{Ico.version}</div>
+            <p className="text-sm font-bold uppercase tracking-widest text-[#3bb5ff]">Connecting to Volume...</p>
+            <p className="text-[10px] text-gray-500 mt-2 uppercase tracking-widest">Attempt {retryCountRef.current} of {maxRetries}</p>
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-600 opacity-40 py-20">
@@ -1523,18 +1640,25 @@ export default function App() {
 
   // Download execution helper
   const executeDownload = (itemsToDownload, strictnessMode = 'NA') => {
-    const encryptedItems = itemsToDownload.filter(i => i.encryption === 'not_automatic' || i.encryption_mode === 'not_automatic');
+    const needsPassword = (i) => {
+      if (i.encryption === 'not_automatic' || i.encryption_mode === 'not_automatic') return true;
+      if (i.type === 'folder' && Array.isArray(i.versions)) return i.versions.some(v => v.has_hash || v.encryption === 'not_automatic');
+      if (i.password_seed_hash) return true;
+      return false;
+    };
+    const encryptedItems = itemsToDownload.filter(needsPassword);
     if (encryptedItems.length) {
-      setModal({ title: 'Passwords Required', content: <PasswordPromptModalContent items={encryptedItems.map(i => ({ id: i.itemid, name: i.displayName }))} onConfirm={(passwords) => { setModal(null); doDownload(itemsToDownload, passwords, strictnessMode); }} /> });
+      setModal({ title: 'Passwords Required', content: <PasswordPromptModalContent items={encryptedItems.map(i => ({ id: i.itemid, name: i.displayName, hash: i.password_seed_hash || '' }))} onConfirm={(passwords) => { setModal(null); doDownload(itemsToDownload, passwords, strictnessMode); }} /> });
     } else {
       doDownload(itemsToDownload, {}, strictnessMode);
+      setModal(null);
     }
   };
   const doDownload = (itemsToDownload, passwords, strictnessMode) => {
-    const downloadFolder = localStorage.getItem('VAULT_OPUS_download_folder') || './downloads';
+    const downloadFolder = localStorage.getItem('VAULT_OPUS_download_folder') || '/storage/emulated/0/Download';
     itemsToDownload.forEach(item => {
       const itemPath = currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`;
-      const args = ['download', itemPath, '-db', selectedDb, '-o', downloadFolder];
+      const args = ['download', itemPath, '-db', selectedDb, '--download_folder', downloadFolder];
       if (Object.keys(passwords).length) args.push('--passwords', JSON.stringify(passwords));
       if (strictnessMode !== 'NA') args.push('--strictness_mode', strictnessMode);
       runCmd(args, item.displayName, 'download');
@@ -1556,12 +1680,12 @@ export default function App() {
         {recentVolumes.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-3"><span className="text-[#3bb5ff]/50">{Ico.clock}</span><h3 className="text-[10px] uppercase font-bold text-[#3bb5ff]/50">Recent</h3></div>
-            <div className="space-y-2">{recentVolumes.map(db => <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}><div onClick={() => { setSelectedDb(db); setTab('explorer'); }} className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"><span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span><div className="text-sm font-bold truncate text-white">{db.replace('.db', '')}</div></div><button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateRecentVolumes(prev => prev.filter(d => d !== db)); if (selectedDb === db) setSelectedDb(''); showToast('Removed', 'success'); }} className="p-3 -m-1.5 text-gray-600 hover:text-red-400 rounded-lg transition-colors flex-shrink-0">{Ico.close}</button></div>)}</div>
+            <div className="space-y-2">{recentVolumes.map(db => <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}><div onClick={() => { if (selectedDb === db) fetchFiles(currentPath); else setSelectedDb(db); setTab('explorer'); }} className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"><span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span><div className="text-sm font-bold truncate text-white">{db.split(/[\/\\]/).pop().replace('.db', '')}</div></div><button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateRecentVolumes(prev => prev.filter(d => d !== db)); if (selectedDb === db) setSelectedDb(''); showToast('Removed', 'success'); }} className="p-3 -m-1.5 text-gray-600 hover:text-red-400 rounded-lg transition-colors flex-shrink-0">{Ico.close}</button></div>)}</div>
           </section>
         )}
         <section>
-          <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className="text-[#3bb5ff]/50">{Ico.cube}</span><h3 className="text-[10px] uppercase font-bold text-[#3bb5ff]/50">Available</h3></div><button onClick={() => setModal({ title: 'Add External Volume', content: <RemoteFolderPicker showFiles onSelect={p => { if (p.endsWith('.db')) { setExternalVolumes(prev => { const u = [...new Set([...prev, p])]; localStorage.setItem('mob_externalVolumes', JSON.stringify(u)); return u; }); fetchDbs(); setModal(null); showToast('Volume added', 'success'); } else showToast('Must be .db', 'error'); }} onCancel={() => setModal(null)} /> })} className="text-[10px] text-[#3bb5ff] font-bold btn-touch uppercase">+ External</button></div>
-          <div className="space-y-2">{dbs.map(db => <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}><div onClick={() => { setSelectedDb(db); setTab('explorer'); }} className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"><span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span><span className="text-sm font-bold text-white truncate">{db.replace('.db', '')}</span></div><button onClick={(e) => { e.stopPropagation(); setModal({ title: 'Volume Options', content: <div className="space-y-2"><button onClick={() => { setModal(null); setSelectedDb(db); setTab('explorer'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.folderOpen} Open</button><button onClick={() => { setModal({ title: 'Rename Volume', content: <RenameVolumeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.rename} Rename</button><button onClick={async () => { try { await fetch('/api/dbs/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); showToast('Packaged', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.share} Package</button><button onClick={() => { setModal(null); setModal({ title: '☢️ NUKE', content: <NukeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/10 border border-red-900/20 rounded-xl text-sm text-red-500 font-bold btn-touch">☢️ NUKE</button><button onClick={() => { updateRecentVolumes(prev => prev.filter(p => p !== db)); if (selectedDb === db) setSelectedDb(''); setModal(null); showToast('Removed', 'success'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.close} Remove from List</button><button onClick={() => { setModal({ title: 'Confirm Deletion', content: <div className="space-y-4"><div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl"><p className="text-sm text-red-400 font-bold">⚠️ PERMANENT DELETE</p><p className="text-xs text-gray-300 mt-1">This will permanently remove <span className="text-white font-mono">{db}</span> from disk. This CANNOT be undone.</p></div><div className="flex gap-3"><button onClick={() => setModal(null)} className="flex-1 py-3 bg-[#0f1f3a] text-gray-300 rounded-xl border border-[#1a3a5c] btn-touch">Cancel</button><button onClick={async () => { try { await fetch('/api/dbs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); fetchDbs(); if (selectedDb === db) setSelectedDb(''); showToast('Deleted', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold btn-touch">Delete</button></div></div> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-900/30 rounded-xl text-sm text-red-400 btn-touch">{Ico.trash} Delete Permanently</button></div> }); }} className="p-2 text-gray-500 hover:text-white btn-touch">{Ico.menu}</button></div>)}</div>
+          <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className="text-[#3bb5ff]/50">{Ico.cube}</span><h3 className="text-[10px] uppercase font-bold text-[#3bb5ff]/50">Available</h3></div></div>
+          <div className="space-y-2">{dbs.map(db => <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}><div onClick={() => { if (selectedDb === db) fetchFiles(currentPath); else setSelectedDb(db); setTab('explorer'); }} className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"><span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span><span className="text-sm font-bold text-white truncate">{db.split(/[\/\\]/).pop().replace('.db', '')}</span></div><button onClick={(e) => { e.stopPropagation(); setModal({ title: 'Volume Options', content: <div className="space-y-2"><button onClick={() => { setModal(null); setSelectedDb(db); setTab('explorer'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.folderOpen} Open</button><button onClick={() => { setModal({ title: 'Rename Volume', content: <RenameVolumeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.rename} Rename</button><button onClick={async () => { try { await fetch('/api/dbs/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); showToast('Packaged', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.share} Package</button><button onClick={() => { setModal(null); setModal({ title: '☢️ NUKE', content: <NukeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/10 border border-red-900/20 rounded-xl text-sm text-red-500 font-bold btn-touch">☢️ NUKE</button><button onClick={() => { updateRecentVolumes(prev => prev.filter(p => p !== db)); if (selectedDb === db) setSelectedDb(''); setModal(null); showToast('Removed', 'success'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.close} Remove from List</button><button onClick={() => { setModal({ title: 'Confirm Deletion', content: <div className="space-y-4"><div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl"><p className="text-sm text-red-400 font-bold">⚠️ PERMANENT DELETE</p><p className="text-xs text-gray-300 mt-1">This will permanently remove <span className="text-white font-mono">{db}</span> from disk. This CANNOT be undone.</p></div><div className="flex gap-3"><button onClick={() => setModal(null)} className="flex-1 py-3 bg-[#0f1f3a] text-gray-300 rounded-xl border border-[#1a3a5c] btn-touch">Cancel</button><button onClick={async () => { try { await fetch('/api/dbs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); fetchDbs(); if (selectedDb === db) setSelectedDb(''); showToast('Deleted', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold btn-touch">Delete</button></div></div> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-900/30 rounded-xl text-sm text-red-400 btn-touch">{Ico.trash} Delete Permanently</button></div> }); }} className="p-2 text-gray-500 hover:text-white btn-touch">{Ico.menu}</button></div>)}</div>
         </section>
         <button onClick={() => setModal({ title: 'Import .vov Package', content: <div className="space-y-3"><RemoteFolderPicker showFiles onSelect={async p => { if (p.endsWith('.vov')) { try { await fetch('/api/dbs/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vov_path: p }) }); fetchDbs(); showToast('Imported', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } } else showToast('Must select .vov', 'error'); }} onCancel={() => setModal(null)} /></div> })} className="w-full py-4 bg-[#0f1f3a] border border-[#1a3a5c] rounded-2xl text-xs text-gray-300 font-bold uppercase btn-touch flex items-center justify-center gap-2">{Ico.import} Import VOV Package</button>
       </div>
@@ -1621,7 +1745,7 @@ export default function App() {
       {bottomSheet && <Sheet open onClose={() => setBottomSheet(null)} title={bottomSheet.title}>{bottomSheet.content}</Sheet>}
       {modal && <Modal open onClose={() => setModal(null)} title={modal.title} wide={modal.wide}>{modal.content}</Modal>}
       {showCreateVolume && <Modal open onClose={() => setShowCreateVolume(false)} title="Create Volume"><div className="space-y-4"><input type="text" value={newDbName} onChange={e => setNewDbName(e.target.value)} placeholder="Volume name" autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" /><button onClick={async () => { try { const r = await fetch('/api/dbs/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: newDbName }) }); const res = await r.json(); if (!r.ok) throw new Error(res.detail || 'Creation failed'); fetchDbs(); setShowCreateVolume(false); setSelectedDb(res.db_name); setTab('explorer'); } catch (e) { showToast(e.message, 'error'); } }} disabled={!newDbName.trim()} className="w-full py-4 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold">Create</button></div></Modal>}
-      {promptData && <Modal open onClose={() => setPromptData(null)} title="Input Required"><div className="space-y-4"><p className="text-sm text-gray-400">{promptData.text}</p><input type={promptData.isPassword ? 'password' : 'text'} autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" onKeyDown={e => { if (e.key === 'Enter') { if (ws) ws.send(JSON.stringify({ action: 'input', data: e.target.value, task_id: promptData.taskId })); setPromptData(null); } }} /><button onClick={() => { if (ws) ws.send(JSON.stringify({ action: 'input', data: '', task_id: promptData.taskId })); setPromptData(null); }} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Submit</button></div></Modal>}
+      {promptQueue.length > 0 && <Modal open onClose={() => setPromptQueue(prev => prev.slice(1))} title="Input Required"><div className="space-y-4"><p className="text-sm text-gray-400">{promptQueue[0].text}</p><input type={promptQueue[0].isPassword ? 'password' : 'text'} autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" onKeyDown={e => { if (e.key === 'Enter') { if (ws) ws.send(JSON.stringify({ action: 'input', data: e.target.value, task_id: promptQueue[0].taskId })); setPromptQueue(prev => prev.slice(1)); } }} /><button onClick={() => { if (ws) ws.send(JSON.stringify({ action: 'input', data: '', task_id: promptQueue[0].taskId })); setPromptQueue(prev => prev.slice(1)); }} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Submit</button></div></Modal>}
       {showSetupModal && (
         <Modal open onClose={() => { }} title="First Time Setup" wide>
           <div className="space-y-4">

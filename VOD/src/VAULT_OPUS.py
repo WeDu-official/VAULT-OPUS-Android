@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-5
+#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -332,11 +332,44 @@ if __name__ == "__main__":
         openpkg_parser = subparsers.add_parser("openpkg", help="Open and import a volume package (.vov)")
         openpkg_parser.add_argument("package_path", help="Path to the .vov file")
 
+        # Volume Creation Command
+        mkvol_parser = subparsers.add_parser("mkvol", help="Create a new volume (DB + Config)")
+        mkvol_parser.add_argument("volume_name", help="Name or absolute path for the new volume")
+
         args = parser.parse_args()
         ph = PlatformHandler(platform="cli")
         if hasattr(args, "inputfile") and args.inputfile:
             ph.input_file_path = args.inputfile
 
+        # Handle mkvol early to avoid requiring a Discord token
+        if args.command == "mkvol":
+            import volume_manager
+            import sqlite3
+            import json
+
+            name_or_path = args.volume_name
+            try:
+                stem = volume_manager.validate_volume_name(name_or_path)
+            except ValueError as e:
+                print(f"[CLI] ❌ {e}")
+                return
+
+            # 1. Create config
+            volume_manager.create_volume_config(stem)
+            cfg_path = volume_manager.get_config_path(stem)
+
+            # 2. Initialize DB
+            db_path = os.path.join(VAULT_OPUS_SRC_DIR, "DATABASES", stem + ".db")
+            if os.path.isabs(name_or_path):
+                db_path = name_or_path
+                if not db_path.endswith(".db"): db_path += ".db"
+
+            with sqlite3.connect(db_path) as conn:
+                db._sync_create_table_if_not_exists(conn)
+
+            print(f"[CLI] Volume '{stem}' created/initialized.")
+            print(f"[CLI] Database: {db_path}")
+            print(f"[CLI] Config: {cfg_path}")
         # Initialize bot for CLI operations
         if not token:
             print("Error: Discord Token is empty. Please run setup.")
@@ -412,7 +445,8 @@ if __name__ == "__main__":
                 print(f"[CLI] Items requiring password found. Grouping by folder/root...")
                 groups = temp_denc.get_password_groups(required_passwords_info, args.target_path)
                 from encryption_base import encrybase as benc_cls
-                benc_instance = benc_cls(log, args.database_file)
+                norm_db_path = temp_ddb.db._normalize_db_file_path(args.database_file)
+                benc_instance = benc_cls(log, norm_db_path)
                 for group_key, items in groups.items():
                     root_upload_name, folder_path = group_key
                     if folder_path: display_name = folder_path + "/*"
@@ -420,11 +454,17 @@ if __name__ == "__main__":
                     cli_provided_seed = None
                     for item in items:
                         if item['itemid'] in cli_passwords: cli_provided_seed = cli_passwords[item['itemid']]; break
+                        if item.get('root_upload_name') in cli_passwords: cli_provided_seed = cli_passwords[item['root_upload_name']]; break
+                        if item.get('relative_path_in_archive') in cli_passwords: cli_provided_seed = cli_passwords[item['relative_path_in_archive']]; break
                         clean_display_name = item['display_name'].split(' (v')[0]
                         if clean_display_name in cli_passwords: cli_provided_seed = cli_passwords[clean_display_name]; break
                         if "undefined" in cli_passwords: cli_provided_seed = cli_passwords["undefined"]; break
                         if "*" in cli_passwords: cli_provided_seed = cli_passwords["*"]; break
                     current_user_seed = cli_provided_seed
+                    if not current_user_seed and folder_path in cli_passwords:
+                        current_user_seed = cli_passwords[folder_path]
+                    if not current_user_seed and args.target_path in cli_passwords:
+                        current_user_seed = cli_passwords[args.target_path]
                     while True:
                         if not current_user_seed:
                             prompt_text = f"ENTER PASSWORD FOR {display_name}: "

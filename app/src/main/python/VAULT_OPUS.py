@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
+#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
@@ -162,10 +162,35 @@ async def run_cli(args_list=None):
     subparsers.add_parser("makepkg").add_argument("volume_name")
     subparsers.add_parser("openpkg").add_argument("package_path")
 
+    # Volume Creation
+    mkvol = subparsers.add_parser("mkvol")
+    mkvol.add_argument("volume_name", help="Name or absolute path for the new volume")
+
     args = parser.parse_args(args_list)
     ph = PlatformHandler(platform="cli")
     if hasattr(args, "inputfile") and args.inputfile: ph.input_file_path = args.inputfile
 
+    if args.command == "mkvol":
+        import volume_manager
+        import path_utils
+        import sqlite3
+        import json
+
+        name_or_path = args.volume_name
+        stem = volume_manager.validate_volume_name(name_or_path)
+
+        # 1. Create config
+        volume_manager.create_volume_config(stem)
+        cfg_path = volume_manager.get_config_path(stem)
+
+        # 2. Initialize DB
+        db_path = path_utils.get_db_path(name_or_path)
+        with sqlite3.connect(db_path) as conn:
+            db._sync_create_table_if_not_exists(conn)
+
+        log.info(f"Volume '{stem}' created/initialized.")
+        log.info(f"Database: {db_path}")
+        log.info(f"Config: {cfg_path}")
     bot = FileBotAPI(intents=intents)
     token = get_bot_token()
     if not token: return
@@ -190,7 +215,7 @@ async def run_cli(args_list=None):
             uploader = UPLOAD(meta, mang, utils, eup, log, ba, version_manager, sema)
             if args.minimize == "yes" and args.encryption_mode == "not_automatic":
                 args.encryption_mode = "automatic"; args.password_seed = None; args.random_seed = False
-            await uploader.uploada(
+            success = await uploader.uploada(
                 interaction=ph, local_path=args.local_path, DB_FILE=args.database_file, 
                 channel_id=int(args.channel_id) if args.channel_id else get_channel_id(), 
                 custom_root_name=args.upload_name, encryption_mode=args.encryption_mode, 
@@ -201,40 +226,96 @@ async def run_cli(args_list=None):
                 chunk_size_mb=args.chunk_size_mb, id_based=args.id_based, 
                 addition_mode=args.addition, source_version=args.source_version, minimize=args.minimize
             )
+            if not success: sys.exit(1)
         elif args.command == "download":
             from download import DownloadContext
+            from downloadtools.encrytion import denc as DencCls
             import json
             pwd_dict = {}
             try: pwd_dict = json.loads(args.passwords)
             except: pass
+
+            # Pre-process passwords: resolve frontend itemid-keyed dict to the
+            # tuple-keyed seed dict that download.py's _get_file_encryption_key expects.
+            seed = {}
+            all_versions = (args.all_versions == "yes")
+            st_version = args.st_version; en_version = args.en_version; version = args.version
+            if version != '': st_version = False; en_version = False; all_versions = False
+            elif st_version != '' and en_version != '': all_versions = False
+            can_apply_version_filters = not (version == False and st_version == False and en_version == False and all_versions == False)
+
+            temp_denc = DencCls(log, db, version_manager)
+            temp_denc.initialize_for_volume(args.database_file)
+            required_passwords_info = await temp_denc._get_items_requiring_password_for_download(
+                args.database_file, args.target_path,
+                version_param=version, start_version_param=st_version, end_version_param=en_version,
+                all_versions_param=all_versions, can_apply_version_filters=can_apply_version_filters
+            )
+            if required_passwords_info:
+                groups = temp_denc.get_password_groups(required_passwords_info, args.target_path)
+                from encryption_base import encrybase as benc_cls
+                benc_instance = benc_cls(log, args.database_file)
+                for group_key, items in groups.items():
+                    root_upload_name, folder_path = group_key
+                    if folder_path: display_name = folder_path + "/*"
+                    else: display_name = items[0]['display_name'].split(' (v')[0] + "/*" if len(items) > 1 else items[0]['display_name']
+                    cli_provided_seed = None
+                    for item in items:
+                        if item['itemid'] in pwd_dict: cli_provided_seed = pwd_dict[item['itemid']]; break
+                        # Also check parent folder itemids — frontend keys password to the selected
+                        # folder/file node itemid, which may be a parent of the actual encrypted file items.
+                        if item.get('root_upload_name') in pwd_dict: cli_provided_seed = pwd_dict[item['root_upload_name']]; break
+                        if item.get('relative_path_in_archive') in pwd_dict: cli_provided_seed = pwd_dict[item['relative_path_in_archive']]; break
+                        clean_display_name = item['display_name'].split(' (v')[0]
+                        if clean_display_name in pwd_dict: cli_provided_seed = pwd_dict[clean_display_name]; break
+                        if "undefined" in pwd_dict: cli_provided_seed = pwd_dict["undefined"]; break
+                        if "*" in pwd_dict: cli_provided_seed = pwd_dict["*"]; break
+                    current_user_seed = cli_provided_seed
+                    while True:
+                        if not current_user_seed:
+                            prompt_text = f"ENTER PASSWORD FOR {display_name}: "
+                            current_user_seed = await ph.prompt_input(prompt_text, is_password=True)
+                            if not current_user_seed: print("Password cannot be empty."); continue
+                        new_pass, _, errors, all_correct = temp_denc.process_entered_passwords(group_key, items, current_user_seed, benc_instance)
+                        if all_correct: seed.update(new_pass); break
+                        else:
+                            if cli_provided_seed and current_user_seed == cli_provided_seed: print(f"❌ Error: CLI provided password for {display_name} was incorrect."); cli_provided_seed = None
+                            else: print(f"❌ Error: {list(errors.values())[0]}. Please try again.")
+                            current_user_seed = None
+
             ctx = DownloadContext(bot, file_table_columns, log, interaction=ph, enc=True)
-            await ctx.downloada(
-                target_path=args.target_path, DB_FILE=args.database_file, 
-                download_folder=args.download_folder, decryption_password_seed=pwd_dict, 
-                version_param=args.version, start_version_param=args.st_version, 
-                end_version_param=args.en_version, all_versions_param=(args.all_versions == "yes"), 
+            success = await ctx.downloada(
+                target_path=args.target_path, DB_FILE=args.database_file,
+                download_folder=args.download_folder, decryption_password_seed=seed,
+                version_param=version, start_version_param=st_version,
+                end_version_param=en_version, all_versions_param=(args.all_versions == "yes"),
                 strictness_mode=args.strictness_mode, id_based=args.id_based
             )
+            if not success: sys.exit(1)
+
         elif args.command == "delete":
             from delete import DeleteContext
             ctx = DeleteContext(bot=bot, file_table_columns=file_table_columns, log=log, intents=intents, interaction=ph)
-            await ctx.deletea(
+            success = await ctx.deletea(
                 target_path=args.target_path, DB_FILE=args.database_file, 
                 nuke=args.nuke, version_param=args.version, 
-                start_version_param=args.start_version, end_version_param=args.end_version,
+                start_version_param=args.st_version, end_version_param=args.en_version,
                 all_versions_param=(args.all_versions == "yes"), id_based=args.id_based, 
                 delete_type=getattr(args, "delete_type", "soft"),
                 skip_confirmation=(args.skip_confirmation == "yes")
             )
+            if not success: sys.exit(1)
         elif args.command == "modify":
             from modify import ModifyContext
             ctx = ModifyContext(bot, file_table_columns, log, ph)
+            success = False
             if args.modify_command == "move": 
-                await ctx.movea(from_path=args.src, to_path=args.dst, DB_FILE=args.database_file, copy_mode=args.copy_mode, id_based=args.id_based, name_check=getattr(args, "name_check", True), src_id_based=getattr(args, "src_id_based", False), dst_id_based=getattr(args, "dst_id_based", False))
+                success = await ctx.movea(from_path=args.src, to_path=args.dst, DB_FILE=args.database_file, copy_mode=args.copy_mode, id_based=args.id_based, name_check=getattr(args, "name_check", True), src_id_based=getattr(args, "src_id_based", False), dst_id_based=getattr(args, "dst_id_based", False))
             elif args.modify_command == "rename": 
-                await ctx.renamea(item_path=args.item, new_name=args.new_name, name_mode=getattr(args, "name_mode", "D"), id_based=args.id_based, name_check=getattr(args, "name_check", True), DB_FILE=args.database_file)
+                success = await ctx.renamea(item_path=args.item, new_name=args.new_name, name_mode=getattr(args, "name_mode", "D"), id_based=args.id_based, name_check=getattr(args, "name_check", True), DB_FILE=args.database_file)
             elif args.modify_command == "makefolder": 
-                await ctx.makefoldera(folder_name=args.folder_name, DB_FILE=args.database_file, parent_path=args.parent, id_based=args.id_based, name_check=getattr(args, "name_check", True))
+                success = await ctx.makefoldera(folder_name=args.folder_name, DB_FILE=args.database_file, parent_path=args.parent, id_based=args.id_based, name_check=getattr(args, "name_check", True))
+            if not success: sys.exit(1)
         elif args.command == "makepkg":
             import volume_manager
             package_path = volume_manager.make_package(args.volume_name)

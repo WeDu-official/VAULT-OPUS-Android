@@ -3,10 +3,18 @@ import platform
 import sys
 from pathlib import Path
 
+def detect_android():
+    """Robustly detects if the current environment is Android."""
+    if 'android' in os.environ.get('PYTHONPATH', '').lower():
+        return True
+    if os.path.exists('/system/bin/app_process'):
+        return True
+    return False
+
+is_android = detect_android()
+
 def get_android_writable_dir():
     """Robustly discovers the app's internal writable directory on Android."""
-    is_android = 'android' in os.environ.get('PYTHONPATH', '').lower() or os.path.exists('/system/bin/app_process')
-    
     if is_android:
         try:
             from java import jclass
@@ -31,18 +39,25 @@ def normalize_path(path_str):
         return ANDROID_WRITABLE_DIR
         
     if os.path.isabs(path_str):
-        # On Android, if it's a root-relative path like "/Download", try to map it to public storage
         if path_str.startswith("/Download"):
             return os.path.join("/storage/emulated/0", path_str.lstrip("/"))
         if path_str.startswith("/Documents"):
             return os.path.join("/storage/emulated/0", path_str.lstrip("/"))
         return os.path.abspath(os.path.normpath(path_str))
 
-    # If it's a common relative path, map to public storage
-    if path_str.lower().startswith("download"):
-         return os.path.abspath(os.path.join("/storage/emulated/0", path_str))
+    # Handle relative paths that should map to public storage
+    norm = os.path.normpath(path_str)
+    lower = norm.lower()
+    
+    # ./downloads, downloads, ./Download, etc. → Android Download
+    if lower.startswith("download") or lower.startswith("./download"):
+        return os.path.abspath(os.path.join("/storage/emulated/0/Download", norm.lstrip("./").lstrip("download").lstrip("s").strip("/")))
+    
+    # ./documents, documents → Android Documents  
+    if lower.startswith("document") or lower.startswith("./document"):
+        return os.path.abspath(os.path.join("/storage/emulated/0/Documents", norm.lstrip("./").lstrip("document").lstrip("s").strip("/")))
 
-    return os.path.abspath(os.path.join(ANDROID_WRITABLE_DIR, os.path.normpath(path_str)))
+    return os.path.abspath(os.path.join(ANDROID_WRITABLE_DIR, norm))
 
 def get_db_path(db_name):
     """Resolves a database name to its full path. Supports internal and external storage."""

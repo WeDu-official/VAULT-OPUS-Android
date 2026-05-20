@@ -1,4 +1,4 @@
-// App.jsx (FOR MOBILE) from the VAULT OPUS PROJECT version 1-beta-release-5
+// App.jsx (FOR MOBILE) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 // ==================== FULL MOBILE GUI App.jsx(NOT ANDROID FUNCTIONAL...) (Mirror of Desktop) ====================
 // IF YOU WANT AN ANDROID FUNCTIONAL VERSION OF IT GO TO https://github.com/WeDu-official/VAULT-OPUS-Android
 import React, { useState, useEffect, useRef } from 'react';
@@ -258,7 +258,7 @@ const castConfigTypes = (base, override) => {
 
 function SettingsTabContent({ config, fetchConfig, showToast }) {
   const [localConfig, setLocalConfig] = useState(null);
-  const [downloadFolder, setDownloadFolder] = useState(localStorage.getItem('VAULT_OPUS_download_folder') || '/storage/emulated/0/Download');
+  const [downloadFolder, setDownloadFolder] = useState(localStorage.getItem('VAULT_OPUS_download_folder') || './downloads');
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
@@ -426,7 +426,7 @@ export default function App() {
   const [terminalOutput, setTerminalOutput] = useState('');
   const [queue, setQueue] = useState([]);
   const [config, setConfig] = useState(null);
-  const [promptData, setPromptData] = useState(null);
+  const [promptQueue, setPromptQueue] = useState([]);
   const [bottomSheet, setBottomSheet] = useState(null);
   const [modal, setModal] = useState(null);
   const [showCreateVolume, setShowCreateVolume] = useState(false);
@@ -487,7 +487,7 @@ export default function App() {
       } else if (msg.type === 'status') {
         setQueue(q => q.map(i => i.id === tid ? { ...i, status: line.includes('Queued') ? 'queued' : 'running' } : i));
       } else if (msg.type === 'prompt') {
-        setPromptData({ text: msg.prompt, isPassword: msg.is_password, taskId: tid });
+        setPromptQueue(prev => [...prev, { text: msg.prompt, isPassword: msg.is_password, taskId: tid }]);
       } else if (msg.type === 'exit') {
         setTerminalOutput(p => p + `\n[Process ${tid} exited with code: ${msg.code}]\n`);
         setQueue(q => q.map(i => i.id === tid ? { ...i, status: msg.code === 0 ? 'completed' : 'failed', progress: msg.code === 0 ? 100 : i.progress } : i));
@@ -566,7 +566,8 @@ export default function App() {
           const checkR = await fetch(`/api/dbs`);
           const checkData = await checkR.json();
           const availableDbs = checkData.dbs || [];
-          if (!availableDbs.includes(selectedDb)) {
+          const selectedDbWithExt = selectedDb.endsWith('.db') ? selectedDb : `${selectedDb}.db`;
+          if (!availableDbs.includes(selectedDb) && !availableDbs.includes(selectedDbWithExt)) {
             setVolumeError("This volume doesn't exist");
             setTree(null);
             return;
@@ -589,7 +590,7 @@ export default function App() {
         has_valid_volume: data.has_valid_volume
       });
       if (data.setup_complete === 0) setShowSetupModal(true);
-    } catch (e) { }
+    } catch (e) { console.error('Setup status check failed', e); }
   };
   useEffect(() => { fetchDbs(); fetchConfig(); fetchRecentVolumes(); fetchSetupStatus(); }, []);
   useEffect(() => {
@@ -1131,6 +1132,10 @@ export default function App() {
     }
 
     const handleSubmit = () => {
+      if (type === 'rename' && !newName.trim()) {
+        showToast('New name cannot be empty', 'error');
+        return;
+      }
       if (type === 'move') {
         onConfirm({
           type: 'move',
@@ -1260,6 +1265,9 @@ export default function App() {
     const startUpload = () => {
       if (localPaths.length === 0) { showToast('Select at least one file/folder', 'error'); return; }
       let finalPassword = password;
+      if (encryption === 'not_automatic' && !minimize) {
+        if (!password && !randomSeed) { showToast('Provide password or select Random', 'error'); return; }
+      }
       if (encryption === 'not_automatic' && randomSeed && !showPassword) {
         const p = genPass();
         setPassword(p);
@@ -1342,12 +1350,34 @@ export default function App() {
   // Password Prompt for encrypted download
   const PasswordPromptModalContent = ({ items: pwdItems, onConfirm }) => {
     const [passwords, setPasswords] = useState({});
+
+    const groupedItems = pwdItems.reduce((acc, item) => {
+      const key = item.hash || item.id;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+
+    const handleChange = (groupId, val) => {
+      setPasswords(prev => {
+        const next = { ...prev };
+        groupedItems[groupId].forEach(item => {
+          next[item.id] = val;
+        });
+        return next;
+      });
+    };
+
     return (
       <div className="space-y-4">
-        {pwdItems.map(item => (
-          <div key={item.id}>
-            <label className="text-xs text-gray-500 uppercase">{item.name}</label>
-            <input type="password" value={passwords[item.id] || ''} onChange={e => setPasswords(prev => ({ ...prev, [item.id]: e.target.value }))} className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm mt-1" />
+        {Object.entries(groupedItems).map(([groupId, itemsInGroup]) => (
+          <div key={groupId} className="bg-[#0a1628] rounded-xl p-3 border border-[#1a3a5c]">
+            <div className="max-h-24 overflow-y-auto mb-2 space-y-1">
+              {itemsInGroup.map(item => (
+                <div key={item.id} className="text-xs text-gray-400 truncate">{item.name}</div>
+              ))}
+            </div>
+            <input type="password" placeholder="Enter password..." onChange={e => handleChange(groupId, e.target.value)} className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-[#3bb5ff]" />
           </div>
         ))}
         <button onClick={() => onConfirm(passwords)} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Download</button>
@@ -1369,7 +1399,7 @@ export default function App() {
         const r = await fetch('/api/dbs/list_sharables');
         const data = await r.json();
         setItems(data.items || []);
-        setCurrentPath(data.path || 'Documents/SHARABLES');
+        setCurrentPath(data.path || 'src/SHARABLES');
       } catch (e) { showToast('Failed to load sharables', 'error'); }
       setLoading(false);
     };
@@ -1410,7 +1440,7 @@ export default function App() {
 
     const tabs = [
       { id: 'browse', label: 'System Browser', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg> },
-      { id: 'sharables', label: 'Documents/SHARABLES', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /></svg> },
+      { id: 'sharables', label: 'src/SHARABLES', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /></svg> },
     ];
 
     return (
@@ -1551,7 +1581,7 @@ export default function App() {
     <div className="space-y-2">
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'New Version', content: <NewVersionUploadModalContent targetItemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} onUpload={() => { }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.plus} Upload New Version</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Versions', content: <SeeVersionsModalContent itemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} onClose={() => setModal(null)} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.clock} See Versions</button>
-      <button onClick={() => { setBottomSheet(null); setModal({ title: 'Download Version', content: <DownloadVersionModalContent itemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} item={item} onDownload={(args) => { if (args) { runCmd(args, item.displayName, 'download'); setModal(null); showToast('Download queued', 'success'); } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.download} Download Version</button>
+      <button onClick={() => { setBottomSheet(null); setModal({ title: 'Download Version', content: <DownloadVersionModalContent itemPath={currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`} item={item} onDownload={(args) => { if (args) { const isEncrypted = item && (item.encryption === 'not_automatic' || item.encryption_mode === 'not_automatic'); if (isEncrypted) { setModal({ title: 'Passwords Required', content: <PasswordPromptModalContent items={[{ id: item.itemid, name: item.displayName, hash: item.password_seed_hash || '' }]} onConfirm={(passwords) => { setModal(null); const finalArgs = [...args]; if (Object.keys(passwords).length) { finalArgs.push('--passwords', JSON.stringify(passwords)); } runCmd(finalArgs, item.displayName, 'download'); showToast('Download queued', 'success'); }} /> }); } else { runCmd(args, item.displayName, 'download'); setModal(null); showToast('Download queued', 'success'); } } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.download} Download Version</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Move / Copy', content: <ModifyModalContent type="move" item={item} onConfirm={(data) => { if (data) { const args = ['modify', data.type]; if (data.type === 'move') { args.push(data.src, data.dst); if (data.copyMode) args.push('--copy'); if (data.srcIdBased) args.push('--src_id_based'); if (data.dstIdBased) args.push('--dst_id_based'); } else { args.push(data.item, data.newName); if (data.nameMode !== 'D') args.push('--mode', data.nameMode); } args.push('-db', selectedDb); if (data.type !== 'move' && data.idBased) args.push('--id_based'); if (!data.nameCheck) args.push('--no_name_check'); runCmd(args, item.displayName, data.type); setModal(null); showToast(`${data.type} queued`, 'success'); } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.move} Move / Copy</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Rename', content: <ModifyModalContent type="rename" item={item} onConfirm={(data) => { if (data) { const args = ['modify', data.type]; args.push(data.item, data.newName); if (data.nameMode !== 'D') args.push('--mode', data.nameMode); args.push('-db', selectedDb); if (data.idBased) args.push('--id_based'); if (!data.nameCheck) args.push('--no_name_check'); runCmd(args, item.displayName, 'rename'); setModal(null); showToast('Rename queued', 'success'); } else setModal(null); }} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.rename} Rename</button>
       <button onClick={() => { setBottomSheet(null); setModal({ title: 'Delete Item', content: <DeleteModalContent singleItem={item} onConfirm={(opts) => { const a = ['delete']; if (item.itemid) a.push(item.itemid, '--id_based'); else a.push(currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`); a.push('-db', selectedDb, '--skip_confirmation', 'yes'); if (opts.type === 'hard') a.push('--hard'); if (opts.scope === 'all') a.push('--all_versions', 'yes'); else if (opts.scope === 'specific' && opts.version) a.push('--version', opts.version); else if (opts.scope === 'range' && opts.startVersion && opts.endVersion) a.push('--st_version', opts.startVersion, '--en_version', opts.endVersion); runCmd(a, item.displayName, 'delete'); setModal(null); clearSelection(); showToast('Delete queued', 'success'); }} onCancel={() => setModal(null)} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-900/30 rounded-xl text-sm text-red-400 btn-touch">{Ico.trash} Delete</button>
@@ -1575,7 +1605,7 @@ export default function App() {
 
       <div className="flex gap-2 px-3 py-3 bg-[#0a1628] border-b border-[#1a3a5c] overflow-x-auto">
         <button onClick={() => setBottomSheet({ title: 'Upload', content: <UploadForm /> })} className="p-3 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl btn-touch shadow-lg">{Ico.upload}</button>
-        <button onClick={() => { if (selectedItems.length) setModal({ title: 'Download', content: <DownloadModalContent onConfirm={(opts) => { executeDownload(selectedItems, opts.strictnessMode); setModal(null); }} onCancel={() => setModal(null)} /> }); }} disabled={!selectedItems.length} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch disabled:opacity-40">{Ico.download}</button>
+        <button onClick={() => { if (selectedItems.length) setModal({ title: 'Download', content: <DownloadModalContent onConfirm={(opts) => { executeDownload(selectedItems, opts.strictnessMode); }} onCancel={() => setModal(null)} /> }); }} disabled={!selectedItems.length} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch disabled:opacity-40">{Ico.download}</button>
         <button onClick={() => { if (selectedItems.length) setModal({ title: 'Delete', content: <DeleteModalContent singleItem={selectedItems.length === 1 ? selectedItems[0] : null} onConfirm={(opts) => { selectedItems.forEach(item => { const a = ['delete']; if (item.itemid) a.push(item.itemid, '--id_based'); else a.push(currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`); a.push('-db', selectedDb, '--skip_confirmation', 'yes'); if (opts.type === 'hard') a.push('--hard'); if (opts.scope === 'all') a.push('--all_versions', 'yes'); else if (opts.scope === 'specific' && opts.version) a.push('--version', opts.version); else if (opts.scope === 'range' && opts.startVersion && opts.endVersion) a.push('--st_version', opts.startVersion, '--en_version', opts.endVersion); runCmd(a, item.displayName, 'delete'); }); clearSelection(); setModal(null); showToast('Delete queued', 'success'); }} onCancel={() => setModal(null)} /> }); }} disabled={!selectedItems.length} className="p-3 bg-red-900/20 border border-red-900/40 text-red-400 rounded-xl btn-touch disabled:opacity-40">{Ico.trash}</button>
         <button onClick={() => setModal({ title: 'New Folder', content: <MakeFolderModalContent /> })} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch">{Ico.newFolder}</button>
         <button onClick={() => setSelectedItems([...items])} disabled={!items.length} className="p-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch disabled:opacity-40">{Ico.selectAll}</button>
@@ -1627,15 +1657,22 @@ export default function App() {
 
   // Download execution helper with password prompt
   const executeDownload = (itemsToDownload, strictnessMode = 'NA') => {
-    const encryptedItems = itemsToDownload.filter(i => i.encryption === 'not_automatic' || i.encryption_mode === 'not_automatic');
+    const needsPassword = (i) => {
+      if (i.encryption === 'not_automatic' || i.encryption_mode === 'not_automatic') return true;
+      if (i.type === 'folder' && Array.isArray(i.versions)) return i.versions.some(v => v.has_hash || v.encryption === 'not_automatic');
+      if (i.password_seed_hash) return true;
+      return false;
+    };
+    const encryptedItems = itemsToDownload.filter(needsPassword);
     if (encryptedItems.length) {
-      setModal({ title: 'Passwords Required', content: <PasswordPromptModalContent items={encryptedItems.map(i => ({ id: i.itemid, name: i.displayName }))} onConfirm={(passwords) => { setModal(null); doDownload(itemsToDownload, passwords, strictnessMode); }} /> });
+      setModal({ title: 'Passwords Required', content: <PasswordPromptModalContent items={encryptedItems.map(i => ({ id: i.itemid, name: i.displayName, hash: i.password_seed_hash || '' }))} onConfirm={(passwords) => { setModal(null); doDownload(itemsToDownload, passwords, strictnessMode); }} /> });
     } else {
       doDownload(itemsToDownload, {}, strictnessMode);
+      setModal(null);
     }
   };
   const doDownload = (itemsToDownload, passwords, strictnessMode) => {
-    const downloadFolder = localStorage.getItem('VAULT_OPUS_download_folder') || '/storage/emulated/0/Download';
+    const downloadFolder = localStorage.getItem('VAULT_OPUS_download_folder') || './downloads';
     itemsToDownload.forEach(item => {
       const itemPath = currentPath === '.' ? item.displayName : `${currentPath}/${item.displayName}`;
       const args = ['download', itemPath, '-db', selectedDb, '-o', downloadFolder];
@@ -1688,7 +1725,7 @@ export default function App() {
                           <p className="text-xs text-gray-300 mt-2">
                             Volume <span className="text-white font-mono">{db}</span> packaged successfully!<br />
                             Package: <span className="text-white font-mono">{data.filename}</span><br />
-                            Stored in <span className="text-white font-mono">Documents/SHARABLES</span> folder.
+                            Stored in <span className="text-white font-mono">src/SHARABLES</span> folder.
                           </p>
                         </div>
                         <button
@@ -1698,7 +1735,7 @@ export default function App() {
                           }}
                           className="w-full py-3 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold flex items-center justify-center gap-2 btn-touch"
                         >
-                          {Ico.share} Open SHARABLES Folder
+                          {Ico.share} Open src/SHARABLES Folder
                         </button>
                         <button
                           onClick={() => setModal(null)}
@@ -1773,8 +1810,8 @@ export default function App() {
 
       {bottomSheet && <Sheet open onClose={() => setBottomSheet(null)} title={bottomSheet.title}>{bottomSheet.content}</Sheet>}
       {modal && <Modal open onClose={() => setModal(null)} title={modal.title} wide={modal.wide}>{modal.content}</Modal>}
-      {showCreateVolume && <Modal open onClose={() => setShowCreateVolume(false)} title="Create Volume"><div className="space-y-4"><input type="text" value={newDbName} onChange={e => setNewDbName(e.target.value)} placeholder="Volume name" autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" /><button onClick={async () => { try { await fetch('/api/dbs/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: newDbName }) }); fetchDbs(); setShowCreateVolume(false); setSelectedDb(newDbName); setTab('explorer'); } catch (e) { showToast(e.message, 'error'); } }} disabled={!newDbName.trim()} className="w-full py-4 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold">Create</button></div></Modal>}
-      {promptData && <Modal open onClose={() => setPromptData(null)} title="Input Required"><div className="space-y-4"><p className="text-sm text-gray-400">{promptData.text}</p><input type={promptData.isPassword ? 'password' : 'text'} autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" onKeyDown={e => { if (e.key === 'Enter') { if (ws) ws.send(JSON.stringify({ action: 'input', data: e.target.value, task_id: promptData.taskId })); setPromptData(null); } }} /><button onClick={() => { if (ws) ws.send(JSON.stringify({ action: 'input', data: '', task_id: promptData.taskId })); setPromptData(null); }} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Submit</button></div></Modal>}
+      {showCreateVolume && <Modal open onClose={() => setShowCreateVolume(false)} title="Create Volume"><div className="space-y-4"><input type="text" value={newDbName} onChange={e => setNewDbName(e.target.value)} placeholder="Volume name" autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" /><button onClick={async () => { try { const res = await fetch('/api/dbs/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: newDbName }) }); if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Failed to create volume'); } const data = await res.json(); const createdDbName = data.db_name || (newDbName.endsWith('.db') ? newDbName : `${newDbName}.db`); fetchDbs(); setShowCreateVolume(false); setSelectedDb(createdDbName); setTab('explorer'); } catch (e) { showToast(e.message, 'error'); } }} disabled={!newDbName.trim()} className="w-full py-4 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold">Create</button></div></Modal>}
+      {promptQueue.length > 0 && <Modal open onClose={() => setPromptQueue(prev => prev.slice(1))} title="Input Required"><div className="space-y-4"><p className="text-sm text-gray-400">{promptQueue[0].text}</p><input type={promptQueue[0].isPassword ? 'password' : 'text'} autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" onKeyDown={e => { if (e.key === 'Enter') { if (ws) ws.send(JSON.stringify({ action: 'input', data: e.target.value, task_id: promptQueue[0].taskId })); setPromptQueue(prev => prev.slice(1)); } }} /><button onClick={() => { if (ws) ws.send(JSON.stringify({ action: 'input', data: '', task_id: promptQueue[0].taskId })); setPromptQueue(prev => prev.slice(1)); }} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Submit</button></div></Modal>}
       {showSetupModal && (
         <Modal open onClose={() => { }} title="First Time Setup" wide>
           <div className="space-y-4">

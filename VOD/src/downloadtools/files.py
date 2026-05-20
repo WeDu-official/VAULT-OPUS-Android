@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#files.py (for downloadtools) (ATRAHASIS) from the VAULT OPUS PROJECT version 1-beta-release-5
+#files.py (for downloadtools) (ATRAHASIS) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -32,13 +32,13 @@ class DecryptionCancelledError(Exception):
     pass
 
 class files:
-    def __init__(self, log, version_manager, DDB, baseapi, bot):
+    def __init__(self, log, version_manager, DDB, baseapi, bot, denc_instance=None):
         self.log = log
         self.version_manager = version_manager
         self.ba = baseapi
         self.bot = bot
         self.MRD = MRD(self.ba, self.log)
-        self.denc = denc(log=self.log, ddb=DDB, version_manager=self.version_manager)
+        self.denc = denc_instance or denc(log=self.log, ddb=DDB, version_manager=self.version_manager)
         # Argon2id verifier — parameters must match upload side
         self._ph = PasswordHasher(
             time_cost=3,
@@ -365,6 +365,7 @@ class files:
 
         benc_inst = None
         if encryption_key is not None:
+            print(self.denc.db_path)
             benc_inst = benc_cls(self.log, self.denc.db_path)
 
         if not parts_map:

@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#delete.py (Azrael) from the VAULT OPUS PROJECT version 1-beta-release-4
+#delete.py (Azrael) from the VAULT OPUS PROJECT version 1-beta-release-6
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -88,7 +88,7 @@ class DeleteContext:
             id_based: bool = False,
             delete_type: str = "soft",
             hard_delete_option: Optional[str] = None,
-            nuke: bool = False):
+            nuke: bool = False) -> bool:
         """
         Main deletion orchestrator - mirrors downloada structure.
 
@@ -101,8 +101,7 @@ class DeleteContext:
 
         # NUKE MODE: Override all parameters for complete database wipe
         if nuke:
-            await self._nuke_database(db_path, DB_FILE)
-            return
+            return await self._nuke_database(db_path, DB_FILE)
 
         normalized_target_path = os.path.normpath(target_path).replace(os.path.sep, '/').strip('/')
         if normalized_target_path == ".":
@@ -129,7 +128,7 @@ class DeleteContext:
                     f"{self.user_mention}, Database file '{DB_FILE}' not found.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # Load all entries
             all_entries = await self.db._db_read_sync(db_path, {})
@@ -138,7 +137,7 @@ class DeleteContext:
                     f"{self.user_mention}, Database is empty - nothing to delete.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # Resolve target path
             if id_based:
@@ -169,7 +168,7 @@ class DeleteContext:
                     f"{self.user_mention}, Could not find '{target_path}' in database.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # Collect entries to delete
             entries, discord_count, db_only_count = await self.delete_db.collect_entries_for_deletion(
@@ -188,7 +187,7 @@ class DeleteContext:
                     f"{self.user_mention}, No items found matching the deletion criteria.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # Group by Discord message for efficient deletion
             message_groups = self.delete_db.group_entries_by_discord_message(entries)
@@ -222,7 +221,7 @@ class DeleteContext:
                         f"{self.user_mention}, Deletion cancelled.",
                         ephemeral=False
                     )
-                    return
+                    return False
 
             # Handle SHOTGUN option (G)
             if hdo == "G":
@@ -284,6 +283,8 @@ class DeleteContext:
                 except Exception as e:
                     self.log.warning(f"Failed to vacuum database: {e}")
 
+            return fully_successful
+
         except Exception as e:
             self.log.critical(f"Critical error during deletion: {e}")
             self.log.critical(traceback.format_exc())
@@ -293,6 +294,7 @@ class DeleteContext:
                 f"Some items may not have been fully removed.",
                 ephemeral=False
             )
+            return False
 
         finally:
             # Cleanup
@@ -309,7 +311,7 @@ class DeleteContext:
                     f">>> [DELETE] User {self.user_id} deletion state cleared for '{target_path}'"
                 )
 
-    async def _nuke_database(self, db_path: str, db_name: str):
+    async def _nuke_database(self, db_path: str, db_name: str) -> bool:
         """
         NUKE MODE: Complete database wipe.
         Ignores all other parameters. Deletes ALL entries, ALL Discord messages,
@@ -332,7 +334,7 @@ class DeleteContext:
                     f"{self.user_mention}, Database file '{db_name}' not found.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # Load ALL entries
             all_entries = await self.db._db_read_sync(db_path, {})
@@ -343,7 +345,7 @@ class DeleteContext:
                     f"{self.user_mention}, Database '{db_name}' is already empty.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # NUKE confirmation (always required, even with skip_confirmation)
             nuke_summary = (
@@ -372,7 +374,7 @@ class DeleteContext:
                     f"{self.user_mention}, NUKE cancelled. Database is safe.",
                     ephemeral=False
                 )
-                return
+                return False
 
             # Begin the nuke
             await self.interaction.send(
@@ -477,6 +479,7 @@ class DeleteContext:
                     f"Errors:\n{error_summary}",
                     ephemeral=False
                 )
+            return fully_successful
 
         except Exception as e:
             self.log.critical(f"[NUKE] Critical error during nuke: {e}")
@@ -488,6 +491,7 @@ class DeleteContext:
                 f"The database may be in an inconsistent state.",
                 ephemeral=False
             )
+            return False
 
         finally:
             if acquired_semaphore:

@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release-5
+#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -810,6 +810,7 @@ async def list_files(db: str, path: str = ".", itemid: Optional[str] = None, ver
                     "total_parts": rep.get("total_parts", 0),
                     "upload_timestamp": rep.get("upload_timestamp", ""),
                     "encryption_mode": rep.get("encryption_mode", "off"),
+                    "password_seed_hash": rep.get("password_seed_hash", ""),
                     "contents": {e.get("relative_path_in_archive", e.get("base_filename", "")): {
                         "name": e.get("base_filename", "unknown"),
                         "type": "folder" if e.get("itemid", "").lower().startswith('d') else "file",
@@ -818,6 +819,7 @@ async def list_files(db: str, path: str = ".", itemid: Optional[str] = None, ver
                         "total_parts": e.get("total_parts", 0),
                         "upload_timestamp": e.get("upload_timestamp", ""),
                         "encryption_mode": e.get("encryption_mode", "off"),
+                        "password_seed_hash": e.get("password_seed_hash", ""),
                     } for e in entries if e.get("itemid") != rep.get("itemid")}
                 }
 

@@ -1,4 +1,4 @@
-// SharablesModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// SharablesModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 // ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect } from 'react';
 import { X, Package, Loader2, Folder, ChevronRight, Search, Home, Database, Download, FileText } from 'lucide-react';

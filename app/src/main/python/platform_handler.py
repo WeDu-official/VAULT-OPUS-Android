@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#platform_handler.py (Ridwan) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
+#platform_handler.py (Ridwan) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
@@ -22,11 +22,11 @@ def _clean_kwargs(**kwargs) -> Dict[str, Any]:
 
 
 async def send_platform_message(
-    interaction: Any,
-    content: Optional[str] = None,
-    file: Optional[discord.File] = None,
-    ephemeral: bool = False,
-    platform: Optional[str] = None
+        interaction: Any,
+        content: Optional[str] = None,
+        file: Optional[discord.File] = None,
+        ephemeral: bool = False,
+        platform: Optional[str] = None
 ):
     """
     Centralized function to send messages across different platforms.
@@ -84,11 +84,11 @@ class PlatformHandler:
             print("[System] Processing your request...")
 
     async def send(
-        self,
-        content: Optional[str] = None,
-        file: Optional[discord.File] = None,
-        ephemeral: bool = False,
-        platform: Optional[str] = None
+            self,
+            content: Optional[str] = None,
+            file: Optional[discord.File] = None,
+            ephemeral: bool = False,
+            platform: Optional[str] = None
     ):
         await send_platform_message(
             self,
@@ -116,7 +116,7 @@ class PlatformHandler:
                 import json
                 import asyncio
                 import os
-                
+
                 # Write the request to the file
                 request_data = {
                     "status": "waiting",
@@ -124,22 +124,22 @@ class PlatformHandler:
                     "is_password": is_password,
                     "timestamp": discord.utils.utcnow().isoformat() if hasattr(discord.utils, "utcnow") else ""
                 }
-                
+
                 with open(self.input_file_path, "w") as f:
                     json.dump(request_data, f)
-                
+
                 print(f"[CLI] Waiting for Web GUI input: {prompt_text}")
-                
+
                 # Polling loop
                 while True:
                     await asyncio.sleep(0.5)
                     if not os.path.exists(self.input_file_path):
                         continue
-                        
+
                     try:
                         with open(self.input_file_path, "r") as f:
                             data = json.load(f)
-                            
+
                         if data.get("status") == "responded" or "response" in data:
                             response = data.get("response", "")
                             # Clear/Reset the file
@@ -149,7 +149,7 @@ class PlatformHandler:
                     except (json.JSONDecodeError, IOError):
                         # File might be partially written, ignore and retry
                         continue
-            
+
             # Standard CLI fallback
             if is_password:
                 return getpass.getpass(prompt_text)

@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#listfiles_tree.py (Lucifer) from the VAULT OPUS PROJECT version 1-beta-release-5
+#listfiles_tree.py (Lucifer) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -79,6 +79,7 @@ class TreeNode:
         self.upload_timestamp = ""
         self.relative_path = ""
         self.root_name = ""
+        self.password_seed_hash = ""
 
         # Computed
         self.depth = 0
@@ -111,6 +112,7 @@ class TreeNode:
                     "upload_timestamp": self.upload_timestamp,
                     "relative_path": self.relative_path,
                     "root_name": self.root_name,
+                    "password_seed_hash": self.password_seed_hash,
                 })
 
             # File version: ONLY if the file owns versions (root_upload_name == itemid)
@@ -172,6 +174,7 @@ class TreeNode:
                     "relative_path": self.relative_path,
                     "root_name": self.root_name,
                     "upload_timestamp": self.upload_timestamp,
+                    "password_seed_hash": self.password_seed_hash,
                 })
 
             # Add children if within depth limit
@@ -316,6 +319,7 @@ class ListFilesTreeBuilder:
             file_node.is_nicknamed = is_nicknamed
             file_node.original_name = original_name
             file_node.encryption_mode = entry.get("encryption_mode", "off")
+            file_node.password_seed_hash = entry.get("password_seed_hash", "")
             file_node.total_parts = entry.get("total_parts", 0)
             file_node.message_id = entry.get("message_id", 0)
             file_node.channel_id = entry.get("channel_id", 0)
@@ -364,6 +368,7 @@ class ListFilesTreeBuilder:
         root_node.is_nicknamed = root_entry.get("is_nicknamed", False)
         root_node.original_name = root_entry.get("original_root_name", "") or root_entry.get("original_base_filename", "")
         root_node.encryption_mode = root_entry.get("encryption_mode", "off")
+        root_node.password_seed_hash = root_entry.get("password_seed_hash", "")
         root_node.upload_timestamp = root_entry.get("upload_timestamp", "")
         root_node.relative_path = ""
 
@@ -394,6 +399,7 @@ class ListFilesTreeBuilder:
             folder_node.is_nicknamed = entry.get("is_base_filename_nicknamed", False)
             folder_node.original_name = entry.get("original_base_filename", "")
             folder_node.encryption_mode = entry.get("encryption_mode", "off")
+            folder_node.password_seed_hash = entry.get("password_seed_hash", "")
             folder_node.upload_timestamp = entry.get("upload_timestamp", "")
 
             # NEO VERSIONING: Folder owns versions only if root_upload_name == itemid
@@ -455,6 +461,7 @@ class ListFilesTreeBuilder:
             file_node.is_nicknamed = is_nicknamed
             file_node.original_name = original_name
             file_node.encryption_mode = representative.get("encryption_mode", "off")
+            file_node.password_seed_hash = representative.get("password_seed_hash", "")
             file_node.total_parts = representative.get("total_parts", 0)
             file_node.message_id = representative.get("message_id", 0)
             file_node.channel_id = representative.get("channel_id", 0)

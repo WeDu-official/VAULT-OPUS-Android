@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#upload.py (MICAEL) from the VAULT OPUS PROJECT version 1-beta-release-4
+#upload.py (MICAEL) from the VAULT OPUS PROJECT version 1-beta-release-6
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -43,7 +43,7 @@ class UPLOAD:
             id_based: bool = False,
             addition_mode: bool = False,
             source_version: Optional[str] = None,
-            minimize: str = "no"):
+            minimize: str = "no") -> bool:
         """
         IT'S A GOD WHO ASSIGNS THE UPLOAD TASK TO ANGELS
         """
@@ -68,11 +68,11 @@ class UPLOAD:
         )
 
         if not root_upload_name:
-            return
+            return False
 
         # Step 3: acquire slot
         if not await self.upmang._acquire_user_upload_slot(user_id, root_upload_name, interaction):
-            return
+            return False
 
         all_entries = await self.db._db_read_sync(DB_FILE, {})
         print(all_entries)
@@ -89,7 +89,7 @@ class UPLOAD:
                 )
             except ValueError as e:
                 await interaction.send(str(e), ephemeral=False)
-                return
+                return False
 
         # Step 5: encryption + version (ONLY place for version logic)
         (
@@ -131,7 +131,7 @@ class UPLOAD:
 
         if overall_total_parts is None:
             await self.upmang._release_upload_slot(user_id, root_upload_name)
-            return
+            return False
 
         # --- Step 7.5: Handle Addition Mode (Metadata Duplication) ---
         if addition_mode and upload_mode == "new_version":
@@ -227,6 +227,7 @@ class UPLOAD:
                 )
                 self.log.info(
                     f"Successfully completed upload for '{root_upload_name}' version '{current_version_for_upload}'.")
+            return upload_successful
 
         except Exception as e:
             self.log.critical(
@@ -237,6 +238,7 @@ class UPLOAD:
             )
             upload_successful = False
             print(f"[OP_FAILURE] {root_upload_name}")
+            return False
 
         finally:
             # --- Step 10: Handle incomplete uploads ---

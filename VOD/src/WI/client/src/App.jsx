@@ -1,4 +1,4 @@
-// App.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// App.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 // ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
@@ -40,7 +40,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [config, setConfig] = useState(null);
   const [ws, setWs] = useState(null);
-  const [promptData, setPromptData] = useState(null);
+  const [promptQueue, setPromptQueue] = useState([]);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [pendingUpload, setPendingUpload] = useState(null);
 
@@ -239,11 +239,11 @@ export default function App() {
           return item;
         }));
       } else if (msg.type === 'prompt') {
-        setPromptData({
+        setPromptQueue(prev => [...prev, {
           text: msg.prompt,
           isPassword: msg.is_password,
           taskId: msg.task_id // Track which task needs input
-        });
+        }]);
       } else if (msg.type === 'exit') {
         setTerminalOutput(prev => prev + `\n[Process ${taskId} exited with code: ${msg.code}]\n`);
 
@@ -440,13 +440,25 @@ export default function App() {
   };
 
   const proceedWithDownload = (options) => {
-    // Check if any items need passwords
-    const encryptedItems = selectedItems.filter(item => item.encryption === 'not_automatic' || item.encryption_mode === 'not_automatic');
+    // Helper: item needs a password if it is directly not_automatic,
+    // OR if it is a folder whose any version has has_hash (meaning it contains encrypted files)
+    const needsPassword = (item) => {
+      if (item.encryption === 'not_automatic' || item.encryption_mode === 'not_automatic') return true;
+      if (item.type === 'folder' && Array.isArray(item.versions)) {
+        return item.versions.some(v => v.has_hash || v.encryption === 'not_automatic');
+      }
+      // Also cover file nodes where password_seed_hash is set (older versions may not have has_hash)
+      if (item.password_seed_hash) return true;
+      return false;
+    };
+
+    const encryptedItems = selectedItems.filter(needsPassword);
 
     if (encryptedItems.length > 0) {
       setPasswordPromptItems(encryptedItems.map(item => ({
         id: item.itemid,
-        name: item.displayName || item.name
+        name: item.displayName || item.name,
+        hash: item.password_seed_hash || ''
       })));
       setPendingDownloadItems({ items: selectedItems, strictnessMode: options.strictnessMode });
       return;
@@ -489,6 +501,27 @@ export default function App() {
         ws.send(JSON.stringify({ action: 'run', args, task_id: taskId }));
       }
     });
+  };
+
+  const executeDownloadWithArgs = (args, displayName, passwords = {}) => {
+    const taskId = `download-version-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const queueItem = {
+      id: taskId,
+      name: displayName,
+      status: 'queued',
+      progress: 0,
+      error: null
+    };
+    setQueue(prev => [...prev, queueItem]);
+
+    const finalArgs = [...args];
+    if (Object.keys(passwords).length > 0) {
+      finalArgs.push('--passwords', JSON.stringify(passwords));
+    }
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'run', args: finalArgs, task_id: taskId }));
+    }
   };
 
   const handleDelete = (options) => {
@@ -1132,19 +1165,19 @@ export default function App() {
             setAvailableVersions([]);
           }}
           onDownload={(args) => {
-            const taskId = `download-version-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-            // Add to queue and send command
-            const queueItem = {
-              id: taskId,
-              name: downloadVersionItemPath.split('/').pop() || 'item',
-              status: 'queued',
-              progress: 0,
-              error: null
-            };
-            setQueue(prev => [...prev, queueItem]);
-
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ action: 'run', args, task_id: taskId }));
+            const isEncrypted = downloadVersionItem && (downloadVersionItem.encryption === 'not_automatic' || downloadVersionItem.encryption_mode === 'not_automatic');
+            if (isEncrypted) {
+              setPasswordPromptItems([{
+                id: downloadVersionItem.itemid,
+                name: downloadVersionItem.displayName || downloadVersionItem.name,
+                hash: downloadVersionItem.password_seed_hash || ''
+              }]);
+              setPendingDownloadItems({
+                args: args,
+                name: downloadVersionItemPath.split('/').pop() || 'item'
+              });
+            } else {
+              executeDownloadWithArgs(args, downloadVersionItemPath.split('/').pop() || 'item');
             }
             setShowDownloadVersionModal(false);
             setAvailableVersions([]);
@@ -1153,17 +1186,17 @@ export default function App() {
         />
       )}
 
-      {promptData && (
+      {promptQueue.length > 0 && (
         <PromptModal
-          promptText={promptData.text}
-          isPassword={promptData.isPassword}
+          promptText={promptQueue[0].text}
+          isPassword={promptQueue[0].isPassword}
           onSubmit={(input) => {
             if (ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ action: 'input', data: input, task_id: promptData.taskId }));
+              ws.send(JSON.stringify({ action: 'input', data: input, task_id: promptQueue[0].taskId }));
             }
-            setPromptData(null);
+            setPromptQueue(prev => prev.slice(1));
           }}
-          onCancel={() => setPromptData(null)}
+          onCancel={() => setPromptQueue(prev => prev.slice(1))}
         />
       )}
 
@@ -1173,9 +1206,13 @@ export default function App() {
           onSubmit={(passwords) => {
             setPasswordPromptItems(null);
             if (pendingDownloadItems) {
-              const items = pendingDownloadItems.items || pendingDownloadItems;
-              const strictnessMode = pendingDownloadItems.strictnessMode || 'NA';
-              executeDownload(items, passwords, strictnessMode);
+              if (pendingDownloadItems.args) {
+                executeDownloadWithArgs(pendingDownloadItems.args, pendingDownloadItems.name, passwords);
+              } else {
+                const items = pendingDownloadItems.items || pendingDownloadItems;
+                const strictnessMode = pendingDownloadItems.strictnessMode || 'NA';
+                executeDownload(items, passwords, strictnessMode);
+              }
               setPendingDownloadItems(null);
             }
           }}

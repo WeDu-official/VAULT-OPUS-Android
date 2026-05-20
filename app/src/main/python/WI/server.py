@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
+#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 
@@ -562,7 +562,7 @@ async def list_files_endpoint(db: str, path: str = ".", itemid: Optional[str] = 
                     "type": "folder" if rep.get("itemid", "").lower().startswith('d') else "file",
                     "version": ver, "itemid": rep.get("itemid"), "total_parts": rep.get("total_parts", 0),
                     "upload_timestamp": rep.get("upload_timestamp", ""), "encryption_mode": rep.get("encryption_mode", "off"),
-                    "contents": {e.get('relative_path_in_archive', e.get('base_filename', '')): {"name": e.get("base_filename", "unknown"), "type": "folder" if e.get("itemid", "").lower().startswith('d') else "file", "version": ver, "itemid": e.get("itemid"), "total_parts": e.get("total_parts", 0), "upload_timestamp": e.get("upload_timestamp", ""), "encryption_mode": e.get("encryption_mode", "off")} for e in entries if e.get("itemid") != rep.get("itemid")}
+                    "password_seed_hash": rep.get("password_seed_hash", ""),"contents": {e.get('relative_path_in_archive', e.get('base_filename', '')): {"name": e.get("base_filename", "unknown"), "type": "folder" if e.get("itemid", "").lower().startswith('d') else "file", "version": ver, "itemid": e.get("itemid"), "total_parts": e.get("total_parts", 0), "upload_timestamp": e.get("upload_timestamp", ""), "encryption_mode": e.get("encryption_mode", "off"),"password_seed_hash": e.get("password_seed_hash", ""),} for e in entries if e.get("itemid") != rep.get("itemid")}
                 }
             return {"query": {"itemid": itemid, "resolved_root": target_itemid}, "results": results, "stats": {"total_items": len(filtered_entries), "total_versions": len(versions)}}
         query_parts = [path, "-f", "nested", "idshow=no", "showoriginal=no", "depth=1"]
@@ -609,7 +609,7 @@ async def websocket_endpoint(websocket: WebSocket):
         input_file_path = None
         try:
             cmd_type = command_args[0] if command_args else ""
-            if cmd_type in ("upload", "update", "download", "delete", "modify"):
+            if cmd_type in ("upload", "update", "download", "delete"):
                 input_fd, input_file_path = tempfile.mkstemp(suffix=".json", prefix=f"vault_input_{task_id}_", dir=WRITABLE_DIR)
                 os.close(input_fd)
                 with open(input_file_path, "w") as f: json.dump({"status": "idle"}, f)

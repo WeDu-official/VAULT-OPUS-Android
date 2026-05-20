@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#volume_manager.py (Karubbiyyun) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
+#volume_manager.py (Karubbiyyun) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
@@ -21,7 +21,10 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 from typing import Tuple, Optional
-from path_utils import ANDROID_WRITABLE_DIR, normalize_path
+from path_utils import ANDROID_WRITABLE_DIR, ANDROID_DOCUMENTS_DIR, normalize_path, is_android as _is_android_from_path_utils
+
+# Use consistent Android detection from path_utils
+is_android = _is_android_from_path_utils
 
 # Android Path Handling
 SRC_DIR = Path(ANDROID_WRITABLE_DIR)
@@ -30,9 +33,8 @@ VOLUMES_CONFIGS_DIR = SRC_DIR / "VOLUMES_CONFIGS"
 DATABASES_DIR = SRC_DIR / "DATABASES"
 
 # Sharables in public Documents for easy access/sharing
-is_android = os.path.exists('/system/bin/app_process') or 'ANDROID_ROOT' in os.environ
 if is_android:
-    SHARABLES_DIR = Path("/storage/emulated/0/Documents/SHARABLES")
+    SHARABLES_DIR = Path(ANDROID_DOCUMENTS_DIR) / "SHARABLES"
 else:
     SHARABLES_DIR = SRC_DIR / "SHARABLES"
 
@@ -191,7 +193,6 @@ def open_explorer_for_sharables(path_str: Optional[str] = None) -> bool:
     target_path = path_str if path_str else str(SHARABLES_DIR)
     path = os.path.abspath(target_path)
     try:
-        is_android = 'android' in platform.platform().lower() or os.path.exists('/system/bin/app_process')
         if is_android:
             from java import jclass
             Python = jclass('com.chaquo.python.Python')

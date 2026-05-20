@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#download.py (JEBRAIL) from the VAULT OPUS PROJECT version 1-beta-release-5
+#download.py (JEBRAIL) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -45,7 +45,7 @@ class DownloadContext:
         if enc:
             from downloadtools.encrytion import denc
             self.denc = denc(log=self.log, ddb=self.DDB, version_manager=self.version_manager) #encrytion.py
-        self.files = files(self.log, self.version_manager, self.DDB, self.baseapi, self.bot) #files.py
+        self.files = files(self.log, self.version_manager, self.DDB, self.baseapi, self.bot, denc_instance=self.denc)
         self.utils = utils #utils.py
         self.FS = FS(self.log,self.baseapi,self.utils)
         self._resolve_target_and_version_mode = self.DDB._resolve_target_and_version_mode

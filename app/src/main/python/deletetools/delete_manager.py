@@ -67,7 +67,7 @@ class DeleteManager:
                 if not iid: continue
 
                 item_versions = await self.version_manager._get_relevant_item_versions(
-                    all_entries, 
+                    all_entries,
                     outsider.get('root_upload_name', ''),
                     outsider.get('relative_path_in_archive', ''),
                     outsider.get('base_filename', ''),
@@ -195,7 +195,7 @@ class DeleteManager:
         else:
             self.log.info("Soft delete or no message groups - skipping Discord cleanup.")
             if delete_type.lower() == "soft" and message_groups:
-                 print(f"{user_mention}, Soft delete: preserving all attachments.")
+                print(f"{user_mention}, Soft delete: preserving all attachments.")
 
         # Step 2: Delete database entries
         # CRITICAL FIX: Build deletion targets with ALL identifying columns including part_number and itemid

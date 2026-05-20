@@ -1,4 +1,4 @@
-// ModifyModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// ModifyModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 // ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 import ArchiveFolderPicker from './ArchiveFolderPicker';
@@ -9,9 +9,15 @@ export default function ModifyModal({ type, item, onConfirm, onCancel, selectedD
   const [copyMode, setCopyMode] = useState(false);
   const [nameMode, setNameMode] = useState('D');
   const [nameCheck, setNameCheck] = useState(true);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
+    if (type === 'rename' && !newName.trim()) {
+      setError('New name cannot be empty');
+      return;
+    }
+    setError('');
     if (type === 'move') {
       onConfirm({
         type: 'move',
@@ -109,11 +115,12 @@ export default function ModifyModal({ type, item, onConfirm, onCancel, selectedD
                 <input
                   type="text"
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={(e) => { setNewName(e.target.value); setError(''); }}
                   className="w-full bg-[#060d1a] border border-[#1a3a5c] focus:border-[#3bb5ff] rounded-lg px-4 py-2.5 text-gray-200 outline-none transition-colors"
                   placeholder="Enter new name"
                   autoFocus
                 />
+                {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
               </div>
 
               <div>

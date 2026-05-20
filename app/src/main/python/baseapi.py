@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#baseapi.py (Hamalat al-Arsh) from the VAULT OPUS PROJECT version 1-beta-release-4 (ANDROID MERGE)
+#baseapi.py (Hamalat al-Arsh) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]

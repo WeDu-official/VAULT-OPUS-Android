@@ -65,7 +65,7 @@ class DownloadContext:
         can_apply_version_filters: bool = False,
         usrinput: bool = False,
         strictness_mode: str = "NA",
-        id_based: bool = False):
+        id_based: bool = False) -> bool:
         """Orchestrator for downloading files/folders with versioning and encryption."""
         # --- Original initialisation ---
         decryption_password_seed = decryption_password_seed or {}
@@ -85,6 +85,7 @@ class DownloadContext:
         overall_total_parts = 0
         local_cleanup_path = None
         multiple_versions = False
+        is_global = False
         db_path = None
         normalized_target_path = os.path.normpath(target_path).replace(os.path.sep, '/').strip('/')
         if normalized_target_path == ".":
@@ -104,12 +105,12 @@ class DownloadContext:
             
             if not os.path.exists(db_path):
                 await self.interaction.send(content=f"{self.user_mention}, the database file '{DB_FILE}' was not found.")
-                return
+                return False
 
             all_entries = await self.db._db_read_sync(db_path, {})
             if not all_entries:
                 await self.interaction.send(content=f"{self.user_mention}, No items found in database '{DB_FILE}'.")
-                return
+                return False
 
             if not os.path.isabs(download_folder):
                 from path_utils import normalize_path as _norm
@@ -131,7 +132,7 @@ class DownloadContext:
 
             if resolved_info is None:
                 await self.interaction.send(f"{self.user_mention}, Could not find any item matching '{target_path}' in `{db_path}`.")
-                return
+                return False
 
             is_global = resolved_info['is_global']
             multiple_versions = resolved_info['multiple_versions']
@@ -144,7 +145,7 @@ class DownloadContext:
             overall_total_parts = total_parts
             if not files_grouped:
                 await self.interaction.send(f"{self.user_mention}, No downloadable file parts found for '{target_path}'.")
-                return
+                return False
 
             local_cleanup_path = await self.files._prepare_output_directories(
                 self.interaction, download_folder, base_download_dir, all_entries,
@@ -168,6 +169,7 @@ class DownloadContext:
                     display_name = file_data.get('original_file_name') or base_name or "unknown_file"
                     await self.interaction.send(content=f"{self.user_mention}, Skipping `{display_name}` version `{version}`: no key.")
                     overall_parts_downloaded += file_data['total_expected_parts']
+                    download_successful = False
                     continue
 
                 output_path, display_path = await self.utils._compute_file_paths(
@@ -206,11 +208,12 @@ class DownloadContext:
                 files_grouped=files_grouped, resolved_info=resolved_info,
                 automatic_removal_or_user_choice=automatic_removal_or_user_choice
             )
+            return download_successful and overall_parts_downloaded == overall_total_parts
 
         except DecryptionCancelledError:
             self.log.info("Download cancelled by user.")
             await self.interaction.send(f"{self.user_mention}, Download cancelled.")
-            download_successful = False
+            return False
 
         except Exception as e:
             self.log.critical(f"Error during download: {e}")
@@ -222,9 +225,10 @@ class DownloadContext:
                 files_grouped=files_grouped if 'files_grouped' in locals() else None,
                 resolved_info=resolved_info if 'resolved_info' in locals() else None,
                 base_download_dir=base_download_dir if 'base_download_dir' in locals() else download_folder,
-                error=e, multiple_versions=multiple_versions, is_global=is_global if 'is_global' in locals() else False,
+                error=e, multiple_versions=multiple_versions, is_global=is_global,
                 local_cleanup_path=local_cleanup_path
             )
+            return False
 
         finally:
             if acquired_semaphore:

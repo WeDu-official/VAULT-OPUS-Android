@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#encrytion.py (for downloadtools) (BAAL) from the VAULT OPUS PROJECT version 1-beta-release-5
+#encrytion.py (for downloadtools) (BAAL) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -161,7 +161,7 @@ class denc:
         self.log.info(f"Checking for items requiring password for download: '{target_path}' with version filters.")
         if not database_file.lower().endswith('.db'):
             database_file += '.db'
-        DATABASE_FILE = os.path.abspath(os.path.normpath(database_file))
+        DATABASE_FILE = self.db._normalize_db_file_path(database_file)
 
         if not os.path.exists(DATABASE_FILE):
             self.log.warning(f"Database file not found: {DATABASE_FILE}. No items to check.")

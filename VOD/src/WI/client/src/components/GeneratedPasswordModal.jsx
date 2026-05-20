@@ -1,4 +1,4 @@
-// GeneratedPasswordModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-5
+// GeneratedPasswordModal.jsx (FOR CLIENT/DESKTOP) from the VAULT OPUS PROJECT version 1-beta-release-6-ESEN-2
 // ==================== FULL CLIENT/DESKTOP GUI====================
 import React, { useState } from 'react';
 import { Copy, Check, ShieldAlert } from 'lucide-react';
