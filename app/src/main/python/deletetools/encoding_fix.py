@@ -16,16 +16,13 @@ def apply():
     if _ALREADY_FIXED:
         return
     _ALREADY_FIXED = True
-    
+
     for name in ('stdout', 'stderr'):
         stream = getattr(sys, name)
         if getattr(stream, 'encoding', None) == 'utf-8':
             continue
         if not hasattr(stream, 'buffer'):
             continue
-        # CRITICAL: check if buffer is already a TextIOWrapper
-        if isinstance(stream, io.TextIOWrapper):
-            continue  # Already wrapped, don't double-wrap
         try:
             new_stream = io.TextIOWrapper(
                 stream.buffer,

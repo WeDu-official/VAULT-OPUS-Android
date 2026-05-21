@@ -121,7 +121,7 @@ class files:
                         # Root folder: all files under this root ID
                         files_in_ver = [
                             e for e in all_entries
-                            if e.get('root_upload_name') == root
+                            if e.get('root_upload_name') in (root, content_rel_path)
                             and (e.get('itemid') or '').lower().startswith('f')
                             and e.get('version') == ver
                         ]
@@ -131,13 +131,13 @@ class files:
                         while added:
                             added = False
                             for e in all_entries:
-                                if e.get('root_upload_name') == root and (e.get('itemid') or '').lower().startswith('d') and e.get('version') == ver:
+                                if e.get('root_upload_name') in (root, content_rel_path) and (e.get('itemid') or '').lower().startswith('d') and e.get('version') == ver:
                                     if e.get('relative_path_in_archive') in descendant_folder_ids and e.get('itemid') not in descendant_folder_ids:
                                         descendant_folder_ids.add(e.get('itemid'))
                                         added = True
                         files_in_ver = [
                             e for e in all_entries
-                            if e.get('root_upload_name') == root
+                            if e.get('root_upload_name') in (root, content_rel_path)
                             and (e.get('itemid') or '').lower().startswith('f')
                             and e.get('version') == ver
                             and e.get('relative_path_in_archive') in descendant_folder_ids
@@ -155,7 +155,7 @@ class files:
                 if content_rel_path == '':
                     files_in_folder = [
                         e for e in all_entries
-                        if e.get('root_upload_name') == root
+                        if e.get('root_upload_name') in (root, content_rel_path)
                         and (e.get('itemid') or '').lower().startswith('f')
                         and e.get('version') in selected_versions
                     ]
@@ -165,13 +165,13 @@ class files:
                     while added:
                         added = False
                         for e in all_entries:
-                            if e.get('root_upload_name') == root and (e.get('itemid') or '').lower().startswith('d') and e.get('version') in selected_versions:
+                            if e.get('root_upload_name') in (root, content_rel_path) and (e.get('itemid') or '').lower().startswith('d') and e.get('version') in selected_versions:
                                 if e.get('relative_path_in_archive') in descendant_folder_ids and e.get('itemid') not in descendant_folder_ids:
                                     descendant_folder_ids.add(e.get('itemid'))
                                     added = True
                     files_in_folder = [
                         e for e in all_entries
-                        if e.get('root_upload_name') == root
+                        if e.get('root_upload_name') in (root, content_rel_path)
                         and (e.get('itemid') or '').lower().startswith('f')
                         and e.get('version') in selected_versions
                         and e.get('relative_path_in_archive') in descendant_folder_ids

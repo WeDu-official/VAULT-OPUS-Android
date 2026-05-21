@@ -22,6 +22,10 @@ import asyncio
 import uuid
 from path_utils import normalize_path, get_db_path, ANDROID_WRITABLE_DIR
 
+class DatabaseError(Exception):
+    """Custom exception for DatabaseManager errors."""
+    pass
+
 class DatabaseManager:
     def __init__(self, file_table_columns: List[str], log):
         """
@@ -108,7 +112,7 @@ class DatabaseManager:
                 columns.append(col_name)
                 placeholders.append("?")
                 values.append(value_to_store)
-            
+
             insert_sql = f"""
             INSERT OR REPLACE INTO file_metadata_table ({", ".join(columns)})
             VALUES ({", ".join(placeholders)});
@@ -121,7 +125,7 @@ class DatabaseManager:
                 conn.rollback()
             self.log.error(f"[SQLite] ERROR inserting into DB '{database_file}': {e}")
             self.log.error(traceback.format_exc())
-            raise
+            raise DatabaseError(f"Insert failed: {e}")
         finally:
             if conn:
                 conn.close()
@@ -157,11 +161,11 @@ class DatabaseManager:
                         where_values.append(str(value))
                 else:
                     self.log.warning(f"[SQLite] WARNING: Query condition for unknown column '{col_name}' ignored.")
-            
+
             sql_query = "SELECT * FROM file_metadata_table"
             if where_clauses:
                 sql_query += " WHERE " + " AND ".join(where_clauses)
-            
+
             self.log.debug(f"SQL Query: {sql_query}, Values: {where_values}")
             cursor = conn.execute(sql_query, tuple(where_values))
             rows = cursor.fetchall()
@@ -183,7 +187,7 @@ class DatabaseManager:
                     else:
                         converted_entry[k] = v if v is not None else ""
                 results.append(converted_entry)
-            
+
             self.log.info(f"[SQLite] Successfully read {len(results)} entries from '{database_file}'.")
             return results
         except Exception as e:
@@ -213,7 +217,7 @@ class DatabaseManager:
                     if k in self.file_table_columns:
                         conditions.append(f"{k} = ?")
                         values.append(v)
-                
+
                 if conditions:
                     delete_sql_parts.append("(" + " AND ".join(conditions) + ")")
                     delete_values.extend(values)
@@ -318,7 +322,7 @@ class DatabaseManager:
         return get_db_path(database_file)
 
     async def _resolve_human_path_to_db_entry_keys(
-        self, target_path: str, all_db_entries: List[Dict[str, Any]]
+            self, target_path: str, all_db_entries: List[Dict[str, Any]]
     ) -> Optional[Tuple[str, str, str, bool, str, str]]:
         """
         Resolve a human-readable path to database entry keys.
@@ -333,8 +337,8 @@ class DatabaseManager:
         # Check if the first segment is an item ID
         first_seg = segments[0]
         is_id_based = bool(
-            first_seg and 
-            (first_seg.lower().startswith('f') or first_seg.lower().startswith('d')) and 
+            first_seg and
+            (first_seg.lower().startswith('f') or first_seg.lower().startswith('d')) and
             len(first_seg) == 33 and first_seg[1:].isalnum()
         )
 
@@ -353,21 +357,21 @@ class DatabaseManager:
         root_candidates = [
             e for e in all_db_entries
             if e.get('root_upload_name') == ''
-            and (e.get('relative_path_in_archive') or '') == ''
-            and (e.get('base_filename') == segments[0] 
-                 or e.get('original_base_filename') == segments[0] 
-                 or e.get('itemid') == segments[0])
+               and (e.get('relative_path_in_archive') or '') == ''
+               and (e.get('base_filename') == segments[0]
+                    or e.get('original_base_filename') == segments[0]
+                    or e.get('itemid') == segments[0])
         ]
-        
+
         if not root_candidates:
             # Try top-level file
             file_candidates = [
                 e for e in all_db_entries
                 if e.get('root_upload_name') == ''
-                and (e.get('relative_path_in_archive') or '') == ''
-                and (e.get('base_filename') == segments[0]
-                    or e.get('original_base_filename') == segments[0]
-                    or e.get('itemid') == segments[0])
+                   and (e.get('relative_path_in_archive') or '') == ''
+                   and (e.get('base_filename') == segments[0]
+                        or e.get('original_base_filename') == segments[0]
+                        or e.get('itemid') == segments[0])
             ]
             if file_candidates:
                 f = file_candidates[0]
@@ -376,7 +380,7 @@ class DatabaseManager:
 
         root_entry = root_candidates[0]
         root_id = root_entry.get('itemid', '')
-        
+
         # Walk remaining segments
         current_rel_ids = []
         i = 1
@@ -384,17 +388,17 @@ class DatabaseManager:
         while i < len(segments):
             seg = segments[i]
             current_parent_id = current_rel_ids[-1] if current_rel_ids else root_id
-            
+
             # Find child
             child = next((
                 e for e in all_db_entries
                 if e.get('root_upload_name') == root_id
-                and e.get('relative_path_in_archive') == current_parent_id
-                and (e.get('base_filename') == seg or e.get('original_base_filename') == seg or e.get('itemid') == seg)
+                   and e.get('relative_path_in_archive') == current_parent_id
+                   and (e.get('base_filename') == seg or e.get('original_base_filename') == seg or e.get('itemid') == seg)
             ), None)
-            
+
             if not child: return None
-            
+
             current_entry = child
             current_rel_ids.append(child.get('itemid', ''))
             i += 1
@@ -402,7 +406,7 @@ class DatabaseManager:
         itemid = current_entry.get('itemid', '')
         is_folder = itemid.lower().startswith('d')
         parent_rel_path = current_rel_ids[-2] if len(current_rel_ids) > 1 else (root_id if current_rel_ids else '')
-        
+
         return root_id, parent_rel_path, current_entry.get('base_filename', ''), is_folder, itemid, (itemid if is_folder else current_entry.get('relative_path_in_archive', ''))
 
     async def _resolve_id_to_path(self, itemid: str, all_db_entries: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:

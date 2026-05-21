@@ -105,10 +105,14 @@ if is_android:
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(intent)
             except Exception as e:
-                logger.error(f"Error requesting Android permissions: {e}")
+                # Fallback print if logger is failing during shutdown or redirection
+                print(f"Error requesting Android permissions: {e}")
+                if 'logger' in globals(): logger.error(f"Error requesting Android permissions: {e}")
         request_android_permissions()
     except Exception as e:
-        logger.error(f"Failed to get Android files dir: {e}")
+        # Fallback print
+        print(f"Failed to initialize Android environment: {e}")
+        if 'logger' in globals(): logger.error(f"Failed to initialize Android environment: {e}")
         WRITABLE_DIR = VAULT_OPUS_SRC_DIR
 else:
     WRITABLE_DIR = VAULT_OPUS_SRC_DIR

@@ -50,7 +50,9 @@ class DeleteDatabase:
         root = target_entry.get('root_upload_name', '')
         rel_path = target_entry.get('relative_path_in_archive', '')
         base_filename = target_entry.get('base_filename', '')
-        content_rel_path = target_entry.get('relative_path_in_archive', '')
+        # For folders: content_rel_path is the folder's OWN itemid (used for descendant lookup).
+        # For files: it is the parent folder's id (relative_path_in_archive).
+        content_rel_path = itemid if is_folder else rel_path
 
         multiple_versions = (
             can_apply_version_filters and (
@@ -204,7 +206,7 @@ class DeleteDatabase:
                     while added:
                         added = False
                         for e in all_entries:
-                            if (e.get('root_upload_name') == root and 
+                            if (e.get('root_upload_name') in (root, folder_id_for_descendants) and 
                                 e.get('version') == ver and 
                                 (e.get('itemid') or '').lower().startswith('d')):
                                 # FIX: Check if this folder's parent is in our descendant set
@@ -216,7 +218,7 @@ class DeleteDatabase:
                     # FIX: Files whose parent folder (relative_path_in_archive) is in descendant set
                     files_in_ver = [
                         e for e in all_entries
-                        if e.get('root_upload_name') == root
+                        if e.get('root_upload_name') in (root, folder_id_for_descendants)
                         and (e.get('itemid') or '').lower().startswith('f')
                         and e.get('version') == ver
                         and e.get('relative_path_in_archive') in descendant_folder_ids
@@ -225,7 +227,7 @@ class DeleteDatabase:
                     # FIX: Subfolders that are descendants (excluding the target folder itself)
                     subfolders = [
                         e for e in all_entries
-                        if e.get('root_upload_name') == root
+                        if e.get('root_upload_name') in (root, folder_id_for_descendants)
                         and (e.get('itemid') or '').lower().startswith('d')
                         and e.get('version') == ver
                         and e.get('itemid') in descendant_folder_ids
@@ -238,21 +240,21 @@ class DeleteDatabase:
                     while added:
                         added = False
                         for e in all_entries:
-                            if e.get('root_upload_name') == root and (e.get('itemid') or '').lower().startswith('d') and e.get('version') == ver:
+                            if e.get('root_upload_name') in (root, content_rel_path) and (e.get('itemid') or '').lower().startswith('d') and e.get('version') == ver:
                                 if e.get('relative_path_in_archive') in descendant_folder_ids and e.get('itemid') not in descendant_folder_ids:
                                     descendant_folder_ids.add(e.get('itemid'))
                                     added = True
 
                     files_in_ver = [
                         e for e in all_entries
-                        if e.get('root_upload_name') == root
+                        if e.get('root_upload_name') in (root, content_rel_path)
                         and (e.get('itemid') or '').lower().startswith('f')
                         and e.get('version') == ver
                         and e.get('relative_path_in_archive') in descendant_folder_ids
                     ]
                     subfolders = [
                         e for e in all_entries
-                        if e.get('root_upload_name') == root
+                        if e.get('root_upload_name') in (root, content_rel_path)
                         and (e.get('itemid') or '').lower().startswith('d')
                         and e.get('version') == ver
                         and e.get('itemid') in descendant_folder_ids

@@ -8,6 +8,7 @@
 #[]=================START OF ACTUAL CODE========================[]
 import sys
 import io
+import os
 
 _ALREADY_FIXED = False
 
@@ -17,15 +18,17 @@ def apply():
         return
     _ALREADY_FIXED = True
     
+    # Chaquopy/Android already handles UTF-8 for logcat. 
+    # Wrapping stdout/stderr causes "I/O operation on closed file" errors.
+    if os.path.exists('/system/bin/app_process') or 'ANDROID_ROOT' in os.environ:
+        return
+
     for name in ('stdout', 'stderr'):
         stream = getattr(sys, name)
         if getattr(stream, 'encoding', None) == 'utf-8':
             continue
         if not hasattr(stream, 'buffer'):
             continue
-        # CRITICAL: check if buffer is already a TextIOWrapper
-        if isinstance(stream, io.TextIOWrapper):
-            continue  # Already wrapped, don't double-wrap
         try:
             new_stream = io.TextIOWrapper(
                 stream.buffer,
