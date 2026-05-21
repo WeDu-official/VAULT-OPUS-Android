@@ -32,13 +32,13 @@ class DecryptionCancelledError(Exception):
     pass
 
 class files:
-    def __init__(self, log, version_manager, DDB, baseapi, bot):
+    def __init__(self, log, version_manager, DDB, baseapi, bot, denc_instance=None):
         self.log = log
         self.version_manager = version_manager
         self.ba = baseapi
         self.bot = bot
         self.MRD = MRD(self.ba, self.log)
-        self.denc = denc(log=self.log, ddb=DDB, version_manager=self.version_manager)
+        self.denc = denc_instance or denc(log=self.log, ddb=DDB, version_manager=self.version_manager)
         # Argon2id verifier — parameters must match upload side
         self._ph = PasswordHasher(
             time_cost=3,
@@ -61,8 +61,8 @@ class files:
             all_entries: list,
             resolved_info: dict,
             version_param: Optional[str],
-            start_version_param: Optional[str],
-            end_version_param: Optional[str],
+            st_version_param: Optional[str],
+            en_version_param: Optional[str],
             all_versions_param: bool,
             can_apply_version_filters: bool,
             db_path: str
@@ -71,18 +71,18 @@ class files:
         # Normalize in-place (no helper function needed if you want simple)
 
         if version_param:
-            start_version_param = None
-            end_version_param = None
+            st_version_param = None
+            en_version_param = None
             all_versions_param = False
 
-        elif start_version_param and end_version_param:
+        elif st_version_param and en_version_param:
             version_param = None
             all_versions_param = False
 
         elif all_versions_param:
             version_param = None
-            start_version_param = None
-            end_version_param = None
+            st_version_param = None
+            en_version_param = None
 
         else:
             # default = latest → all params already None/False
@@ -109,10 +109,10 @@ class files:
                 f"DEBUG: Collecting files for folder. Root ID: '{root}', content prefix: '{content_rel_path}'"
             )
 
-            if can_apply_version_filters and (version_param or start_version_param or end_version_param or all_versions_param):
+            if can_apply_version_filters and (version_param or st_version_param or en_version_param or all_versions_param):
                 folder_versions = await self.version_manager._get_relevant_item_versions(
                     all_entries, root, resolved_info['rel_path'], "",
-                    version_param, start_version_param, end_version_param, all_versions_param,
+                    version_param, st_version_param, en_version_param, all_versions_param,
                     itemid=resolved_info['itemid']
                 )
                 for fv in folder_versions:
@@ -147,7 +147,7 @@ class files:
                 # No version filters: newest version of each file under folder
                 folder_versions = await self.version_manager._get_relevant_item_versions(
                     all_entries, root, resolved_info['rel_path'], "",
-                    version_param, start_version_param, end_version_param, all_versions_param,
+                    version_param, st_version_param, en_version_param, all_versions_param,
                     itemid=resolved_info['itemid']
                 )
                 selected_versions = {fv.get('version') for fv in folder_versions}
@@ -200,7 +200,7 @@ class files:
             # FIXED: Pass all_entries (list) instead of db_path (string)
             relevant_raw = await self.version_manager._get_relevant_item_versions(
                 all_entries, root, rel_path, base,
-                version_param, start_version_param, end_version_param, all_versions_param,
+                version_param, st_version_param, en_version_param, all_versions_param,
                 itemid=resolved_info['itemid']
             )
             self.log.info(f"DEBUG: Found {len(relevant_raw)} entries for target file with version filters.")

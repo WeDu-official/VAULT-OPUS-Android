@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#encryption_base.py (Hafaza) from the VAULT OPUS PROJECT version 1-beta-release-6
+#encryption_base.py (Hafaza) from the VAULT OPUS PROJECT version 1-beta-release*
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -27,7 +27,8 @@ class encrybase:
         self.db_path = db_path
         self._HKDF_SALT = None
         self._HKDF_INFO = None
-        
+        if db_path:
+            self.initialize_for_volume(db_path)
         # --- Argon2id Configuration ---
         # Conservative defaults. Tune per-server:
         # time_cost=3, memory_cost=65536 (64MB) ≈ 100-200ms on modern CPU

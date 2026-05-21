@@ -29,15 +29,15 @@ class DDB:
 
     async def _resolve_id_based_target(
         self, target_id: str, all_entries: list,
-        version_param, start_version_param, end_version_param,
+        version_param, st_version_param, en_version_param,
         all_versions_param, can_apply_version_filters
     ):
         """
         Resolve an ID-based target (e.g., 'f123' or 'd456') to download info.
         """
-        version_param, start_version_param, end_version_param, all_versions_param = \
+        version_param, st_version_param, en_version_param, all_versions_param = \
             self.versioning._normalize_version_params(
-                version_param, start_version_param, end_version_param, all_versions_param
+                version_param, st_version_param, en_version_param, all_versions_param
             )
 
         # Find the entry with this itemid
@@ -58,7 +58,7 @@ class DDB:
         multiple_versions = (
             can_apply_version_filters and (
                 all_versions_param or
-                (start_version_param is not None and end_version_param is not None)
+                (st_version_param is not None and en_version_param is not None)
             )
         )
 
@@ -79,17 +79,17 @@ class DDB:
             'original_base': orig_base,
             'multiple_versions': multiple_versions,
             'version_param': version_param,
-            'start_version_param': start_version_param,
-            'end_version_param': end_version_param,
+            'st_version_param': st_version_param,
+            'en_version_param': en_version_param,
             'all_versions_param': all_versions_param
         }
 
     async def _resolve_target_and_version_mode(self, normalized_target_path: str, all_entries: list,
-                                               version_param, start_version_param, end_version_param,
+                                               version_param, st_version_param, en_version_param,
                                                all_versions_param, can_apply_version_filters, target_path):
-        version_param, start_version_param, end_version_param, all_versions_param = \
+        version_param, st_version_param, en_version_param, all_versions_param = \
             self.versioning._normalize_version_params(
-                version_param, start_version_param, end_version_param, all_versions_param
+                version_param, st_version_param, en_version_param, all_versions_param
             )
 
         if normalized_target_path == "":
@@ -103,8 +103,8 @@ class DDB:
                 'itemid': '',
                 'content_rel_path': '',
                 'version_param': version_param,
-                'start_version_param': start_version_param,
-                'end_version_param': end_version_param,
+                'st_version_param': st_version_param,
+                'en_version_param': en_version_param,
                 'all_versions_param': all_versions_param
             }
 
@@ -121,7 +121,7 @@ class DDB:
         multiple_versions = (
                 can_apply_version_filters and (
                 all_versions_param or
-                (start_version_param is not None and end_version_param is not None)
+                (st_version_param is not None and en_version_param is not None)
         )
         )
 
@@ -142,8 +142,8 @@ class DDB:
             'original_base': orig_base,
             'multiple_versions': multiple_versions,
             'version_param': version_param,
-            'start_version_param': start_version_param,
-            'end_version_param': end_version_param,
+            'st_version_param': st_version_param,
+            'en_version_param': en_version_param,
             'all_versions_param': all_versions_param
         }
 

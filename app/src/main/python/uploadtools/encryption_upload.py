@@ -221,7 +221,7 @@ class EncryptionManager:
                             f"Your random password seed for new version of '{target_base_filename}': ||`{final_user_seed}`||."
                         )
                     else:
-                        final_user_seed = user_seed
+                        final_user_seed = user_seed.strip()
                     
                     final_encryption_key = self.encryption._derive_key_from_seed(final_user_seed)
                     final_password_hash = self._ph.hash(final_user_seed) if save_hash else ""
@@ -283,6 +283,8 @@ class EncryptionManager:
                         ephemeral=False
                     )
                     raise ValueError("Password seed required")
+                else:
+                    final_user_seed = final_user_seed.strip()
 
                 final_encryption_key = self.encryption._derive_key_from_seed(final_user_seed)
                 if save_hash:

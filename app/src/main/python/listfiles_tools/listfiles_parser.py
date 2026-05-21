@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#listfiles_parser.py (satan) from the VAULT OPUS PROJECT version 1-beta-release-6
+#listfiles_parser.py (satan) from the VAULT OPUS PROJECT version 1-beta-release*
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -423,13 +423,13 @@ class ListFilesParser:
         value = value.strip()
 
         if value.startswith(">="):
-            query.start_version_param = value[2:]
+            query.st_version_param = value[2:]
         elif value.startswith(">"):
-            query.start_version_param = value[1:]
+            query.st_version_param = value[1:]
         elif value.startswith("<="):
-            query.end_version_param = value[2:]
+            query.en_version_param = value[2:]
         elif value.startswith("<"):
-            query.end_version_param = value[1:]
+            query.en_version_param = value[1:]
         else:
             query.version_param = value
 
@@ -437,8 +437,8 @@ class ListFilesParser:
         """Parse version range like '1.0.0,2.0.0'."""
         parts = value.split(",")
         if len(parts) == 2:
-            query.start_version_param = parts[0].strip()
-            query.end_version_param = parts[1].strip()
+            query.st_version_param = parts[0].strip()
+            query.en_version_param = parts[1].strip()
 
     def _parse_date(self, value: str) -> datetime:
         """Parse date string into datetime."""
@@ -723,7 +723,7 @@ class ListFilesFilter:
             return list(entries)
 
         # If no version filters specified, group by itemid and take latest
-        if not (query.version_param or query.start_version_param or query.end_version_param):
+        if not (query.version_param or query.st_version_param or query.en_version_param):
             from collections import defaultdict
             item_groups = defaultdict(list)
             for e in entries:
@@ -745,17 +745,17 @@ class ListFilesFilter:
             if query.version_param:
                 if ver_str == query.version_param:
                     result.append(entry)
-            elif query.start_version_param and query.end_version_param:
-                start_parsed = self.versioning.parse_version(query.start_version_param)
-                end_parsed = self.versioning.parse_version(query.end_version_param)
+            elif query.st_version_param and query.en_version_param:
+                start_parsed = self.versioning.parse_version(query.st_version_param)
+                end_parsed = self.versioning.parse_version(query.en_version_param)
                 if start_parsed <= ver_parsed <= end_parsed:
                     result.append(entry)
-            elif query.start_version_param:
-                start_parsed = self.versioning.parse_version(query.start_version_param)
+            elif query.st_version_param:
+                start_parsed = self.versioning.parse_version(query.st_version_param)
                 if ver_parsed >= start_parsed:
                     result.append(entry)
-            elif query.end_version_param:
-                end_parsed = self.versioning.parse_version(query.end_version_param)
+            elif query.en_version_param:
+                end_parsed = self.versioning.parse_version(query.en_version_param)
                 if ver_parsed <= end_parsed:
                     result.append(entry)
         return result

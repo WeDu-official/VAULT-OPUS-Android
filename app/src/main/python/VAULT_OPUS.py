@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
+#VAULT_OPUS.py (AL-MALIK AL- A'LA) from the VAULT OPUS PROJECT version 1-beta-release*
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
@@ -15,6 +15,8 @@ import asyncio
 import discord
 from discord.ext import commands
 import os
+import re
+import json
 import argparse
 import logging
 from typing import List, Dict, Optional
@@ -63,15 +65,35 @@ class FileBotAPI(commands.Bot):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(command_prefix=[chr(47)], intents=intents)
         self.upload_semaphore = asyncio.Semaphore(max_concurrent)
+        self._upload_semaphore_initial_capacity = max_concurrent
+        self.download_queue = asyncio.Queue()
         self.download_semaphore = asyncio.Semaphore(max_concurrent)
+        self.delete_task_queue = asyncio.Queue()
+        self.deletion_task = None
+        self.user_uploading: Dict[int, List[str]] = {}
+        self.user_downloading: Dict[int, str] = {}
         self.http_session = None
+        self.log_prefix = "[FileBotAPI]"
+        self.total_parts_cache: Dict[str, int] = {}
+        self._db_table_init_status: Dict[str, bool] = {}
+        self.discord_api_delay = 0.05
+        self.batch_size_discord_checks = 50
+        self.batch_delay_discord_checks = 2.0
         self.log = log
         self.file_table_columns = file_table_columns
         self.db = db
         self.version_manager = version_manager
 
     async def setup_hook(self): self.http_session = aiohttp.ClientSession()
-    async def on_ready(self): self.log.info(f'Logged in as {self.user.name}')
+    async def on_ready(self):
+        self.log.info(f'Logged in as {self.user.name} (ID: {self.user.id})')
+        self.user_uploading.clear()
+        self.user_downloading.clear()
+        self.log.info("Cleared user_uploading and user_downloading states on startup.")
+
+    async def on_message(self, message: discord.Message):
+        if message.author == self.user: return
+        await self.process_commands(message)
 
 async def run_cli(args_list=None):
     parser = argparse.ArgumentParser(description="VAULT_OPUS CLI Tool")
@@ -244,17 +266,21 @@ async def run_cli(args_list=None):
             elif st_version != '' and en_version != '': all_versions = False
             can_apply_version_filters = not (version == False and st_version == False and en_version == False and all_versions == False)
 
-            temp_denc = DencCls(log, db, version_manager)
+            from downloadtools.download_database import DDB
+            temp_ddb = DDB(version_manager, interaction=None)
+            temp_denc = DencCls(log, temp_ddb, version_manager)
             temp_denc.initialize_for_volume(args.database_file)
             required_passwords_info = await temp_denc._get_items_requiring_password_for_download(
                 args.database_file, args.target_path,
-                version_param=version, start_version_param=st_version, end_version_param=en_version,
+                version_param=version, st_version_param=st_version, en_version_param=en_version,
                 all_versions_param=all_versions, can_apply_version_filters=can_apply_version_filters
             )
             if required_passwords_info:
                 groups = temp_denc.get_password_groups(required_passwords_info, args.target_path)
                 from encryption_base import encrybase as benc_cls
-                benc_instance = benc_cls(log, args.database_file)
+                # Normalize DB path for consistency
+                norm_db_path = db._normalize_db_file_path(args.database_file)
+                benc_instance = benc_cls(log, norm_db_path)
                 for group_key, items in groups.items():
                     root_upload_name, folder_path = group_key
                     if folder_path: display_name = folder_path + "/*"
@@ -270,12 +296,19 @@ async def run_cli(args_list=None):
                         if clean_display_name in pwd_dict: cli_provided_seed = pwd_dict[clean_display_name]; break
                         if "undefined" in pwd_dict: cli_provided_seed = pwd_dict["undefined"]; break
                         if "*" in pwd_dict: cli_provided_seed = pwd_dict["*"]; break
+                    
                     current_user_seed = cli_provided_seed
+                    # Advanced resolution: check folder_path and target_path directly in pwd_dict
+                    if not current_user_seed and folder_path in pwd_dict:
+                        current_user_seed = pwd_dict[folder_path]
+                    if not current_user_seed and args.target_path in pwd_dict:
+                        current_user_seed = pwd_dict[args.target_path]
+
                     while True:
                         if not current_user_seed:
                             prompt_text = f"ENTER PASSWORD FOR {display_name}: "
                             current_user_seed = await ph.prompt_input(prompt_text, is_password=True)
-                            if not current_user_seed: print("Password cannot be empty."); continue
+                            if not current_user_seed or not current_user_seed.strip(): print("Password cannot be empty."); continue
                         new_pass, _, errors, all_correct = temp_denc.process_entered_passwords(group_key, items, current_user_seed, benc_instance)
                         if all_correct: seed.update(new_pass); break
                         else:
@@ -287,8 +320,8 @@ async def run_cli(args_list=None):
             success = await ctx.downloada(
                 target_path=args.target_path, DB_FILE=args.database_file,
                 download_folder=args.download_folder, decryption_password_seed=seed,
-                version_param=version, start_version_param=st_version,
-                end_version_param=en_version, all_versions_param=(args.all_versions == "yes"),
+                version_param=version, st_version_param=st_version,
+                en_version_param=en_version, all_versions_param=(args.all_versions == "yes"),
                 strictness_mode=args.strictness_mode, id_based=args.id_based
             )
             if not success: sys.exit(1)
@@ -299,7 +332,7 @@ async def run_cli(args_list=None):
             success = await ctx.deletea(
                 target_path=args.target_path, DB_FILE=args.database_file, 
                 nuke=args.nuke, version_param=args.version, 
-                start_version_param=args.st_version, end_version_param=args.en_version,
+                st_version_param=args.st_version, en_version_param=args.en_version,
                 all_versions_param=(args.all_versions == "yes"), id_based=args.id_based, 
                 delete_type=getattr(args, "delete_type", "soft"),
                 skip_confirmation=(args.skip_confirmation == "yes")

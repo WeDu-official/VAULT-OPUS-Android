@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#encrytion.py (for downloadtools) (BAAL) from the VAULT OPUS PROJECT version 1-beta-release-6
+#encrytion.py (for downloadtools) (BAAL) from the VAULT OPUS PROJECT version 1-beta-release*
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -93,6 +93,8 @@ class denc:
         errors = {}
         all_correct = True
 
+        entered_password = entered_password.strip()
+
         try:
             derived_key = benc_instance._derive_key_from_seed(entered_password)
         except Exception as e:
@@ -146,8 +148,8 @@ class denc:
             database_file: str,
             target_path: str,
             version_param: Optional[str],
-            start_version_param: Optional[str],
-            end_version_param: Optional[str],
+            st_version_param: Optional[str],
+            en_version_param: Optional[str],
             all_versions_param: bool,
             can_apply_version_filters: bool
     ) -> List[Dict[str, Any]]:
@@ -161,7 +163,7 @@ class denc:
         self.log.info(f"Checking for items requiring password for download: '{target_path}' with version filters.")
         if not database_file.lower().endswith('.db'):
             database_file += '.db'
-        DATABASE_FILE = os.path.abspath(os.path.normpath(database_file))
+        DATABASE_FILE = self.db._normalize_db_file_path(database_file)
 
         if not os.path.exists(DATABASE_FILE):
             self.log.warning(f"Database file not found: {DATABASE_FILE}. No items to check.")
@@ -226,15 +228,15 @@ class denc:
             if not is_target_a_folder:  # If the target is a specific file
                 final_items_to_check.extend(await self.version_manager._get_relevant_item_versions(
                     all_db_entries, resolved_root_name, resolved_rel_path, resolved_base_name,
-                    version_param, start_version_param, end_version_param, all_versions_param,
+                    version_param, st_version_param, en_version_param, all_versions_param,
                     itemid=target_itemid
                 ))
             else:  # If the target is a specific folder, and version filters apply to the folder itself
-                if version_param or start_version_param or end_version_param or all_versions_param:
+                if version_param or st_version_param or en_version_param or all_versions_param:
                     # Get the specific version(s) of the *folder itself*
                     folder_version_entries = await self.version_manager._get_relevant_item_versions(
                         all_db_entries, resolved_root_name, resolved_rel_path, resolved_base_name,
-                        version_param, start_version_param, end_version_param, all_versions_param,
+                        version_param, st_version_param, en_version_param, all_versions_param,
                         itemid=target_itemid
                     )
                     # For each version of the folder, fetch all *files* within that specific version scope
@@ -263,7 +265,7 @@ class denc:
                             unique_files_in_scope_keys.add(file_key)
                             latest_file_version = await self.version_manager._get_relevant_item_versions(
                                 all_db_entries, file_key[0], file_key[1], file_key[2],
-                                version_param=None, start_version_param=None, end_version_param=None,
+                                version_param=None, st_version_param=None, en_version_param=None,
                                 all_versions_param=False, itemid=file_entry.get('itemid')
                             )
                             final_items_to_check.extend(latest_file_version)
@@ -278,7 +280,7 @@ class denc:
                     # Get only the newest version for each item
                     latest_item_entry = await self.version_manager._get_relevant_item_versions(
                         all_db_entries, item_key[0], item_key[1], item_key[2],
-                        version_param=None, start_version_param=None, end_version_param=None, 
+                        version_param=None, st_version_param=None, en_version_param=None, 
                         all_versions_param=False, itemid=entry.get('itemid')
                     )
                     final_items_to_check.extend(latest_item_entry)

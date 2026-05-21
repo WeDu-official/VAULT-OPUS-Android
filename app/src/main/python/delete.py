@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#delete.py (Azrael) from the VAULT OPUS PROJECT version 1-beta-release-6
+#delete.py (Azrael) from the VAULT OPUS PROJECT version 1-beta-release*
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -79,8 +79,8 @@ class DeleteContext:
             target_path: str,
             DB_FILE: str,
             version_param: Optional[str] = None,
-            start_version_param: Optional[str] = None,
-            end_version_param: Optional[str] = None,
+            st_version_param: Optional[str] = None,
+            en_version_param: Optional[str] = None,
             all_versions_param: bool = False,
             can_apply_version_filters: bool = False,
             skip_confirmation: bool = False,
@@ -146,8 +146,8 @@ class DeleteContext:
                     target_id=normalized_target_path,
                     all_entries=all_entries,
                     version_param=version_param,
-                    start_version_param=start_version_param,
-                    end_version_param=end_version_param,
+                    st_version_param=st_version_param,
+                    en_version_param=en_version_param,
                     all_versions_param=all_versions_param,
                     can_apply_version_filters=can_apply_version_filters
                 )
@@ -157,8 +157,8 @@ class DeleteContext:
                     normalized_target_path=normalized_target_path,
                     all_entries=all_entries,
                     version_param=version_param,
-                    start_version_param=start_version_param,
-                    end_version_param=end_version_param,
+                    st_version_param=st_version_param,
+                    en_version_param=en_version_param,
                     all_versions_param=all_versions_param,
                     can_apply_version_filters=can_apply_version_filters
                 )
@@ -175,8 +175,8 @@ class DeleteContext:
                 all_entries=all_entries,
                 resolved_info=resolved_info,
                 version_param=version_param,
-                start_version_param=start_version_param,
-                end_version_param=end_version_param,
+                st_version_param=st_version_param,
+                en_version_param=en_version_param,
                 all_versions_param=all_versions_param,
                 can_apply_version_filters=can_apply_version_filters,
                 db_path=db_path

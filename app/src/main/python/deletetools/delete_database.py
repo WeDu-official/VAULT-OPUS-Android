@@ -27,17 +27,17 @@ class DeleteDatabase:
         target_id: str,
         all_entries: List[Dict[str, Any]],
         version_param: Optional[str],
-        start_version_param: Optional[str],
-        end_version_param: Optional[str],
+        st_version_param: Optional[str],
+        en_version_param: Optional[str],
         all_versions_param: bool,
         can_apply_version_filters: bool
     ) -> Optional[Dict[str, Any]]:
         """
         Resolve an ID-based target (e.g., 'f123' or 'd456') to deletion info.
         """
-        version_param, start_version_param, end_version_param, all_versions_param = \
+        version_param, st_version_param, en_version_param, all_versions_param = \
             self.versioning._normalize_version_params(
-                version_param, start_version_param, end_version_param, all_versions_param
+                version_param, st_version_param, en_version_param, all_versions_param
             )
 
         # Find the entry with this itemid
@@ -55,7 +55,7 @@ class DeleteDatabase:
         multiple_versions = (
             can_apply_version_filters and (
                 all_versions_param or
-                (start_version_param is not None and end_version_param is not None)
+                (st_version_param is not None and en_version_param is not None)
             )
         )
 
@@ -69,8 +69,8 @@ class DeleteDatabase:
             'content_rel_path': content_rel_path,
             'multiple_versions': multiple_versions,
             'version_param': version_param,
-            'start_version_param': start_version_param,
-            'end_version_param': end_version_param,
+            'st_version_param': st_version_param,
+            'en_version_param': en_version_param,
             'all_versions_param': all_versions_param
         }
 
@@ -79,14 +79,14 @@ class DeleteDatabase:
         normalized_target_path: str,
         all_entries: List[Dict[str, Any]],
         version_param: Optional[str],
-        start_version_param: Optional[str],
-        end_version_param: Optional[str],
+        st_version_param: Optional[str],
+        en_version_param: Optional[str],
         all_versions_param: bool,
         can_apply_version_filters: bool
 ) -> Optional[Dict[str, Any]]:
-        version_param, start_version_param, end_version_param, all_versions_param = \
+        version_param, st_version_param, en_version_param, all_versions_param = \
             self.versioning._normalize_version_params(
-                version_param, start_version_param, end_version_param, all_versions_param
+                version_param, st_version_param, en_version_param, all_versions_param
             )
 
         if normalized_target_path == "":
@@ -98,10 +98,10 @@ class DeleteDatabase:
                 'is_folder': True,
                 'itemid': '',
                 'content_rel_path': '',
-                'multiple_versions': all_versions_param or bool(start_version_param and end_version_param),
+                'multiple_versions': all_versions_param or bool(st_version_param and en_version_param),
                 'version_param': version_param,
-                'start_version_param': start_version_param,
-                'end_version_param': end_version_param,
+                'st_version_param': st_version_param,
+                'en_version_param': en_version_param,
                 'all_versions_param': all_versions_param
             }
 
@@ -116,7 +116,7 @@ class DeleteDatabase:
         multiple_versions = (
             can_apply_version_filters and (
                 all_versions_param or
-                (start_version_param is not None and end_version_param is not None)
+                (st_version_param is not None and en_version_param is not None)
             )
         )
 
@@ -130,8 +130,8 @@ class DeleteDatabase:
             'content_rel_path': content_rel_path,
             'multiple_versions': multiple_versions,
             'version_param': version_param,
-            'start_version_param': start_version_param,
-            'end_version_param': end_version_param,
+            'st_version_param': st_version_param,
+            'en_version_param': en_version_param,
             'all_versions_param': all_versions_param
         }
 
@@ -140,8 +140,8 @@ class DeleteDatabase:
         all_entries: List[Dict[str, Any]],
         resolved_info: Dict[str, Any],
         version_param: Optional[str],
-        start_version_param: Optional[str],
-        end_version_param: Optional[str],
+        st_version_param: Optional[str],
+        en_version_param: Optional[str],
         all_versions_param: bool,
         can_apply_version_filters: bool,
         db_path: str
@@ -156,7 +156,7 @@ class DeleteDatabase:
         target_itemid = resolved_info.get('itemid')  # The actual folder itemid
 
         if is_global:
-            if all_versions_param or (start_version_param and end_version_param) or version_param:
+            if all_versions_param or (st_version_param and en_version_param) or version_param:
                 self.log.warning(
                     "[DELETE] Version filters applied to global delete. "
                     "This is dangerous and will be ignored. Deleting ALL entries."
@@ -166,7 +166,7 @@ class DeleteDatabase:
         elif is_folder:
             folder_versions = await self.versioning._get_relevant_item_versions(
                 all_entries, root, rel_path, base_filename,
-                version_param, start_version_param, end_version_param, all_versions_param,
+                version_param, st_version_param, en_version_param, all_versions_param,
                 itemid=target_itemid
             )
             target_versions = set(fv.get('version') for fv in folder_versions)
@@ -280,7 +280,7 @@ class DeleteDatabase:
             # Single file — unchanged
             file_versions = await self.versioning._get_relevant_item_versions(
                 all_entries, root, rel_path, base_filename,
-                version_param, start_version_param, end_version_param, all_versions_param,
+                version_param, st_version_param, en_version_param, all_versions_param,
                 itemid=resolved_info['itemid']
             )
             entries_to_delete.extend(file_versions)
@@ -412,9 +412,9 @@ class DeleteDatabase:
         # Version info
         if resolved_info['all_versions_param']:
             lines.append("🔖 **Versions**: ALL VERSIONS")
-        elif resolved_info['start_version_param'] and resolved_info['end_version_param']:
+        elif resolved_info['st_version_param'] and resolved_info['en_version_param']:
             lines.append(
-                f"🔖 **Versions**: {resolved_info['start_version_param']} to {resolved_info['end_version_param']}"
+                f"🔖 **Versions**: {resolved_info['st_version_param']} to {resolved_info['en_version_param']}"
             )
         elif resolved_info['version_param']:
             lines.append(f"🔖 **Version**: {resolved_info['version_param']}")

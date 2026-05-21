@@ -1,6 +1,6 @@
 <div align="center">
   <img src="VAULT_OPUSlogo.png" alt="VAULT_OPUS Logo" width="400" />
-  <h1>VAULT OPUS (Android)</h1>
+  <h1>VAULT OPUS (ANDROID)</h1>
   <p><b>The Infinity Cloud Storage Project — Turn Discord into your personal unlimited vault.</b></p>
 
 [![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-green.svg)](https://developer.android.com/about/versions/nougat/android-7.0)
@@ -9,6 +9,8 @@
 </div>
 
 ---
+
+## 📌 Version of VAULT OPUS (ANDROID) in this readme is **1-beta-release-7**
 
 ## 📱 Mobile App (Android)
 

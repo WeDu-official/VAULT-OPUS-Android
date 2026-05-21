@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#versioning.py (ASRAFIL) from the VAULT OPUS PROJECT version 1-beta-release-6
+#versioning.py (ASRAFIL) from the VAULT OPUS PROJECT version 1-beta-release*
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -68,8 +68,8 @@ class VersioningManager:
 
     async def _get_relevant_item_versions(self, all_entries: List[Dict[str, Any]], root_upload_name: str,
                                           relative_path_in_archive: str, base_filename: str,
-                                          version_param: Optional[str], start_version_param: Optional[str],
-                                          end_version_param: Optional[str], all_versions_param: bool,
+                                          version_param: Optional[str], st_version_param: Optional[str],
+                                          en_version_param: Optional[str], all_versions_param: bool,
                                           itemid: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Fetches relevant item versions based on itemid.
@@ -104,7 +104,7 @@ class VersioningManager:
             
             # Apply version filters to the folder versions themselves
             target_folder_versions = self._filter_version_strings(
-                folder_versions, version_param, start_version_param, end_version_param, all_versions_param
+                folder_versions, version_param, st_version_param, en_version_param, all_versions_param
             )
             
             all_item_versions = []
@@ -165,9 +165,9 @@ class VersioningManager:
             return sorted_entries
         elif version_param:
             return [e for e in sorted_entries if e.get('version') == version_param]
-        elif start_version_param and end_version_param:
-            parsed_start = self.parse_version(start_version_param)
-            parsed_end = self.parse_version(end_version_param)
+        elif st_version_param and en_version_param:
+            parsed_start = self.parse_version(st_version_param)
+            parsed_end = self.parse_version(en_version_param)
             return [e for e in sorted_entries if parsed_start <= self.parse_version(e.get('version', '0.0.0.0')) <= parsed_end]
         else:
             newest_version = sorted_entries[-1].get("version")
@@ -214,9 +214,9 @@ class VersioningManager:
         """Legacy alias. Use _check_version_exists_for_item for neo-versioning."""
         return await self._check_version_exists_for_item(database_file, root_upload_name, version)
 
-    def _normalize_version_params(self, version_param, start_version_param, end_version_param, all_versions_param):
+    def _normalize_version_params(self, version_param, st_version_param, en_version_param, all_versions_param):
         if version_param: return version_param, None, None, False
-        if start_version_param and end_version_param: return None, start_version_param, end_version_param, False
+        if st_version_param and en_version_param: return None, st_version_param, en_version_param, False
         if all_versions_param: return None, None, None, True
         return None, None, None, False
 

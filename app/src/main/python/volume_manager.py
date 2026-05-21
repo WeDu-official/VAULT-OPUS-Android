@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#volume_manager.py (Karubbiyyun) from the VAULT OPUS PROJECT version 1-beta-release-6 (ANDROID MERGE)
+#volume_manager.py (Karubbiyyun) from the VAULT OPUS PROJECT version 1-beta-release* (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]
