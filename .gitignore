@@ -104,3 +104,33 @@ build_toy/dist/
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+ENV/
+env/
+.env
+
+# Project Specific Data
+DATABASES/
+VOLUMES_CONFIGS/
+SHARABLES/
+config.json
+setup_complete.txt
+recent_volumes.json
+uploads/
+downloads/
+listfiles_outputs/
+**/DATABASES/
+**/VOLUMES_CONFIGS/
+**/SHARABLES/
+**/config.json
+**/setup_complete.txt
+**/recent_volumes.json
+**/uploads/
+**/downloads/
+**/listfiles_outputs/
