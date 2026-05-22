@@ -464,11 +464,6 @@ class files:
                         break
 
                     try:
-                        await self.ba.send_message_robustly(
-                            interaction=interaction,
-                            content=f"{user_mention}, Fetching part {p_num}/{total_parts} for `{display_path} (v{version})`..."
-                        )
-
                         if msg_id != 0:
                             # For part 1 of encrypted files: fetch raw bytes and buffer them
                             if p_num == 1 and encryption_key is not None:

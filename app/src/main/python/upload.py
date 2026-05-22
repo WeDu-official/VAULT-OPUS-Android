@@ -75,7 +75,6 @@ class UPLOAD:
             return False
 
         all_entries = await self.db._db_read_sync(DB_FILE, {})
-        print(all_entries)
         # Step 4: validate NEW UPLOAD ONLY
         if upload_mode == "new_upload":
             try:
@@ -88,6 +87,7 @@ class UPLOAD:
                     name_check=name_check
                 )
             except ValueError as e:
+                self.log.info(str(e))
                 await interaction.send(str(e), ephemeral=False)
                 return False
 
@@ -116,6 +116,7 @@ class UPLOAD:
             minimize=minimize
         )
         if minimize == "yes":
+            self.log.info(f"{user_mention}, **Minimize Mode Active:** Reusing existing chunks. Your encryption choices are ignored; matched chunks will inherit their original encryption, and unmatched chunks will use 'automatic' encryption.")
             await interaction.send(
                 content=f"{user_mention}, **Minimize Mode Active:** Reusing existing chunks. Your encryption choices are ignored; matched chunks will inherit their original encryption, and unmatched chunks will use 'automatic' encryption.",
                 ephemeral=False
@@ -221,10 +222,6 @@ class UPLOAD:
                 )
             else:
                 print(f"[OP_SUCCESS] {root_upload_name}")
-                await self.baseapi.send_message_robustly(
-                    channel_id,
-                    f"{user_mention}, All parts of '{root_upload_name}' (Version: {current_version_for_upload}) have been uploaded successfully!"
-                )
                 self.log.info(
                     f"Successfully completed upload for '{root_upload_name}' version '{current_version_for_upload}'.")
             return upload_successful

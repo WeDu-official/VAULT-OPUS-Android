@@ -129,11 +129,6 @@ class UploadManager:
         try:
             file_size, total_parts = self.utils._compute_file_parts(file_path, current_chunk_size)
             emptyfile = (total_parts == 0)
-            
-            await self.baseapi.send_message_robustly(
-                channel_id,
-                content=f"{user_mention}, Starting upload of `{display_path}` ({total_parts} parts)."
-            )
             passed = True
             
             if not emptyfile:
@@ -238,10 +233,6 @@ class UploadManager:
                 if overall_parts_uploaded_ref is not None:
                     overall_parts_uploaded_ref[0] += 1
                     overall_percentage = (overall_parts_uploaded_ref[0] / overall_total_parts) * 100 if overall_total_parts > 0 else 0
-                    await self.baseapi.send_message_robustly(
-                        channel_id,
-                        content=f"{user_mention}, Completed upload of empty file `{final_base}`. Overall: {overall_parts_uploaded_ref[0]}/{overall_total_parts} parts ({overall_percentage:.0f}%)."
-                    )
             
             self.log.info(f"Finished uploading itemid '{itemid}' version '{version}'.")
             return passed
@@ -249,7 +240,6 @@ class UploadManager:
         except Exception as e:
             self.log.error(f"Error uploading '{file_path}': {e}")
             self.log.error(traceback.format_exc())
-            await self.baseapi.send_message_robustly(channel_id, f"{user_mention}, Error uploading `{display_path}`: {e}")
             raise
 
     async def _process_files_in_folder(self, interaction: discord.Interaction, folder_path: str,

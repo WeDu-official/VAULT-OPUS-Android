@@ -159,6 +159,7 @@ class EncryptionManager:
         # --- New version ---
         if upload_mode == "new_version":
             if not target_item_path:
+                self.log.error("target_item_path required for new_version")
                 await interaction.send(
                     f"{interaction.user_mention}, Error: target_item_path required for new_version.",
                     ephemeral=False
@@ -189,6 +190,7 @@ class EncryptionManager:
             # Type check
             is_target_folder_in_db = (target_root_id or "").lower().startswith('d')
             if is_target_folder_in_db != is_folder:
+                self.log.error("Local path type mismatch")
                 await interaction.send(
                     f"{interaction.user_mention}, Error: Local path type does not match target DB item type.",
                     ephemeral=False
@@ -232,6 +234,7 @@ class EncryptionManager:
                         # We still need the actual seed to encrypt! 
                         # If they don't provide a seed for not_automatic, we must error out.
                         if not user_seed:
+                            self.log.error("Password seed required for versioning with not_automatic")
                             await interaction.send(
                                 f"{interaction.user_mention}, Error: Password seed required for 'not_automatic' version upload.",
                                 ephemeral=False
@@ -239,6 +242,7 @@ class EncryptionManager:
                             raise ValueError("Password seed required for versioning with not_automatic")
                     else:
                         # Switched from another mode to not_automatic without providing seed
+                        self.log.error("Password seed required")
                         await interaction.send(
                             f"{interaction.user_mention}, Error: Provide a password seed to switch to 'not_automatic' encryption.",
                             ephemeral=False
@@ -255,6 +259,7 @@ class EncryptionManager:
                     DB_FILE, resolved_root_id, new_version_string
                 )
             except ValueError as e:
+                self.log.error(str(e))
                 await interaction.send(str(e))
                 raise
 
@@ -278,6 +283,7 @@ class EncryptionManager:
                         f"Your random password seed for '{root_upload_name}': ||`{final_user_seed}`||."
                     )
                 elif not final_user_seed:
+                    self.log.error("Password seed required")
                     await interaction.send(
                         f"{interaction.user_mention}, Error: Password seed required for 'not_automatic' encryption.",
                         ephemeral=False
