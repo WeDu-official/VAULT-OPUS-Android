@@ -12,6 +12,14 @@
 
 ## 📌 Version of VAULT OPUS (ANDROID) in this readme is **1-beta-release-7**
 
+## WANNA DO PRE INSTALL SETUP? <a href="https://youtu.be/i9rnTi9l2ww">
+  <img src="https://img.youtube.com/vi/i9rnTi9l2ww/maxresdefault.jpg" width="500">
+</a>
+
+## WANNA INSTALL? <a href="https://youtu.be/Z1bom2lRAYk">
+  <img src="https://img.youtube.com/vi/Z1bom2lRAYk/maxresdefault.jpg" width="500">
+</a>
+
 ## 📱 Mobile App (Android)
 
 Vault Opus Android is the native mobile implementation of the Infinity Cloud Storage Project. utilizing discord CDN to give you secure, unlimited storage on the go.
