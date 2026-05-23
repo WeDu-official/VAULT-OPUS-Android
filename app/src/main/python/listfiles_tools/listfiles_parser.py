@@ -644,15 +644,14 @@ class ListFilesFilter:
         return result
 
     def _filter_by_latest_version(self, entries):
-        """Groups by name and path and returns only the latest version of each."""
-        # We group by (parent, name) to ensure that even if items have different itemids
-        # (due to separate uploads of the same file), they are collapsed in the UI.
+        """Groups by root_upload_name, name, and path, returning the latest version of each."""
         item_groups = defaultdict(list)
         for e in entries:
+            root_id = e.get("root_upload_name", "")
             parent = e.get("relative_path_in_archive", "")
             name = e.get("base_filename", "")
             is_folder = e.get("itemid", "").lower().startswith('d')
-            group_key = (parent, name, is_folder)
+            group_key = (root_id, parent, name, is_folder)
             item_groups[group_key].append(e)
         
         results = []

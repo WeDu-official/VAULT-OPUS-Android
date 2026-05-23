@@ -296,11 +296,28 @@ class ListFilesContext:
         else:
             await self._send_discord_output(final_output, lang, ephemeral, query_string)
     async def _send_discord_output(self, final_output: str, lang: str, ephemeral: bool, query_string: str):
-        """Send output as Discord message or file attachment."""
+        """Send output as a message or, if too long, as an attached/saved file."""
+        header = f"{self.user_mention}, Results for query: `{query_string}`\n"
+        platform = getattr(self.interaction, "platform", "discord")
+
         if len(final_output) <= 1900:
             await self.interaction.send(
-                f"{self.user_mention}, Results for query: `{query_string}`\n"
-                f"```{lang}\n{final_output}\n```",
+                header + f"```{lang}\n{final_output}\n```",
+                ephemeral=ephemeral
+            )
+        elif platform == "cli":
+            # CLI mode: save to a real file and print the path
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_ext = "txt" if lang == "yaml" else "json"
+            filename = f"listfiles_{timestamp}.{file_ext}"
+            output_dir = os.path.join(os.getcwd(), "listfiles_outputs")
+            os.makedirs(output_dir, exist_ok=True)
+            file_path = os.path.join(output_dir, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(final_output)
+            await self.interaction.send(
+                header + f"Output is too long to print in terminal. Saved to file: {file_path}",
                 ephemeral=ephemeral
             )
         else:
@@ -308,10 +325,8 @@ class ListFilesContext:
             file_ext = "txt" if lang == "yaml" else "json"
             file_buffer = BytesIO(final_output.encode('utf-8'))
             discord_file = discord.File(file_buffer, filename=f"listfiles_results.{file_ext}")
-
             await self.interaction.send(
-                f"{self.user_mention}, Results for query: `{query_string}`\n"
-                f"Output is too long for Discord message. See attached file.",
+                header + "Output is too long for a single message. See attached file.",
                 file=discord_file,
                 ephemeral=ephemeral
             )

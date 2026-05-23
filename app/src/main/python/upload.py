@@ -13,6 +13,8 @@ import discord
 from typing import Optional
 import os
 import traceback
+import datetime
+from uploadtools.encryption_upload import TypeMismatchFallback
 class UPLOAD:
     def __init__(self, db, upload_manager,utils,eup, log,baseapi,version_manager,semaup):
         self.db = db
@@ -92,29 +94,73 @@ class UPLOAD:
                 return False
 
         # Step 5: encryption + version (ONLY place for version logic)
-        (
-            current_version_for_upload,
-            inherited_encryption_mode,
-            inherited_encryption_key,
-            inherited_password_seed_hash,
-            inherited_store_hash_flag,
-            usrinput,
-            resolved_itemid, resolved_root_id, resolved_parent_id
-        ) = await self.encryption._prepare_encryption_and_version(
-            interaction,all_entries,
-            DATABASE_FILE,
-            upload_mode,
-            target_item_path,
-            new_version_string,
-            user_seed,
-            random_seed,
-            encryption_mode,
-            save_hash,
-            root_upload_name,
-            is_folder,
-            id_based,
-            minimize=minimize
-        )
+        # ValueError  → user-facing error already sent inside the function; clean return.
+        # TypeMismatchFallback → file/folder type mismatch; re-run as new_upload with auto-nickname.
+        try:
+            (
+                current_version_for_upload,
+                inherited_encryption_mode,
+                inherited_encryption_key,
+                inherited_password_seed_hash,
+                inherited_store_hash_flag,
+                usrinput,
+                resolved_itemid, resolved_root_id, resolved_parent_id
+            ) = await self.encryption._prepare_encryption_and_version(
+                interaction,all_entries,
+                DATABASE_FILE,
+                upload_mode,
+                target_item_path,
+                new_version_string,
+                user_seed,
+                random_seed,
+                encryption_mode,
+                save_hash,
+                root_upload_name,
+                is_folder,
+                id_based,
+                minimize=minimize
+            )
+        except TypeMismatchFallback as tmf:
+            # Warning already sent to user; release slot then re-run as new_upload
+            await self.upmang._release_upload_slot(user_id, root_upload_name)
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            fallback_nickname = f"{tmf.local_name}_{ts}_{tmf.target_name}"
+            self.log.warning(
+                f"[TYPE_MISMATCH_FALLBACK] Re-uploading '{tmf.local_name}' as new_upload "
+                f"with auto-nickname '{fallback_nickname}'."
+            )
+            await interaction.send(
+                f"{interaction.user_mention}, The upload for '{tmf.local_name}' has been automatically converted to a NEW UPLOAD due to the type mismatch.\n"
+                f"It will be saved with the auto-generated nickname: `{fallback_nickname}`.",
+                ephemeral=False
+            )
+            # Machine-readable sentinel: parsed by Android/Mobile frontends to show a dialog.
+            # Format: [DIALOG:TYPE_MISMATCH]<local_name>|<target_name>|<fallback_nickname>
+            print(f"[DIALOG:TYPE_MISMATCH]{tmf.local_name}|{tmf.target_name}|{fallback_nickname if len(fallback_nickname) <= 30 else fallback_nickname[:27] + '...'}")
+            return await self.uploada(
+                interaction=interaction,
+                local_path=local_path,
+                DB_FILE=DB_FILE,
+                channel_id=channel_id,
+                custom_root_name=fallback_nickname,
+                encryption_mode=encryption_mode,
+                user_seed=user_seed,
+                random_seed=random_seed,
+                save_hash=save_hash,
+                upload_mode="new_upload",
+                target_item_path=None,
+                new_version_string=new_version_string,
+                strictness_mode=strictness_mode,
+                name_check=name_check,
+                chunk_size_mb=chunk_size_mb,
+                id_based=False,
+                addition_mode=False,
+                source_version=None,
+                minimize=minimize
+            )
+        except ValueError:
+            await self.upmang._release_upload_slot(user_id, root_upload_name)
+            return False
         if minimize == "yes":
             self.log.info(f"{user_mention}, **Minimize Mode Active:** Reusing existing chunks. Your encryption choices are ignored; matched chunks will inherit their original encryption, and unmatched chunks will use 'automatic' encryption.")
             await interaction.send(

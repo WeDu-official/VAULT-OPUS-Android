@@ -92,7 +92,7 @@ function Toast({ message, type, onClose }) {
 }
 
 // ---------- Remote Folder Picker ----------
-function RemoteFolderPicker({ initialPath, onSelect, onCancel, showFiles = false, multiSelect = false }) {
+function RemoteFolderPicker({ initialPath, onSelect, onCancel, showFiles = false, multiSelect = false, singleSelectOnly = false }) {
   const [currentPath, setCurrentPath] = useState(initialPath || '');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -115,6 +115,10 @@ function RemoteFolderPicker({ initialPath, onSelect, onCancel, showFiles = false
   useEffect(() => { fetchDirectory(initialPath); }, [initialPath]);
 
   const toggleSelect = (path) => {
+    if (singleSelectOnly) {
+      setSelectedPaths(prev => prev.includes(path) ? [] : [path]);
+      return;
+    }
     setSelectedPaths(prev => prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]);
   };
 
@@ -392,7 +396,7 @@ function SettingsTabContent({ config, fetchConfig, showToast }) {
             <label className="text-[10px] text-[#3bb5ff]/70 uppercase tracking-wider font-bold ml-1">Download Destination</label>
             <div className="flex gap-2">
               <input type="text" value={downloadFolder} onChange={e => setDownloadFolder(e.target.value)} className="flex-1 bg-[#060d1a] border border-[#1a3a5c] focus:border-[#3bb5ff] rounded-xl px-3 py-3 text-sm text-gray-200 outline-none transition-colors" />
-              <button onClick={() => setShowPicker(true)} className="px-4 py-3 bg-[#0f1f3a] border border-[#1a3a5c] rounded-xl text-[#3bb5ff] btn-touch">Browse</button>
+              <button onClick={() => setShowPicker(true)} className="px-4 py-3 bg-[#0f1f3a] border border-[#1a3a5c] rounded-xl text-[#3bb5ff] btn-touch">Choose another</button>
             </div>
           </div>
         </div>
@@ -471,6 +475,31 @@ export default function App() {
       const line = msg.data || '';
       if (msg.type === 'stdout' || msg.type === 'stderr') {
         setTerminalOutput(p => p + line);
+
+        // Detect type-mismatch fallback sentinel and show a modal dialog
+        // Format: [DIALOG:TYPE_MISMATCH]<local_name>|<target_name>|<fallback_nickname>
+        const dialogMatch = line.match(/\[DIALOG:TYPE_MISMATCH\]([^|]+)\|([^|]+)\|(.+)/);
+        if (dialogMatch) {
+          const [, localName, targetName, fallbackNickname] = dialogMatch;
+          setModal({
+            title: '⚠️ Type Mismatch — Converted to New Upload',
+            content: (
+              <div className="space-y-4">
+                <p className="text-sm text-amber-300 leading-relaxed">
+                  The upload for <span className="font-bold text-white">"{localName}"</span> could not be saved as a new version of <span className="font-bold text-white">"{targetName}"</span> because one is a file and the other is a folder.
+                </p>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  It has been automatically re-submitted as a <span className="font-bold text-white">NEW UPLOAD</span> with the auto-generated name:
+                </p>
+                <div className="p-3 bg-[#060d1a] border border-amber-500/30 rounded-xl font-mono text-xs text-amber-300 break-all">
+                  {fallbackNickname}
+                </div>
+              </div>
+            ),
+            onClose: () => setModal(null)
+          });
+        }
+
         const progressMatch = line.match(/Overall.*Progress.*\((\d+)%\)/i) || line.match(/Overall:.*\((\d+)%\)/i);
         setQueue(q => q.map(i => {
           if (i.id !== tid) return i;
@@ -1064,7 +1093,7 @@ export default function App() {
     }
 
     if (showFolderPicker) {
-      return <RemoteFolderPicker initialPath={uploadPath} showFiles onSelect={p => { setUploadPath(p); setShowFolderPicker(false); }} onCancel={() => setShowFolderPicker(false)} />;
+      return <RemoteFolderPicker initialPath={uploadPath} showFiles multiSelect singleSelectOnly onSelect={p => { setUploadPath(p[0] || ''); setShowFolderPicker(false); }} onCancel={() => setShowFolderPicker(false)} />;
     }
 
     return (

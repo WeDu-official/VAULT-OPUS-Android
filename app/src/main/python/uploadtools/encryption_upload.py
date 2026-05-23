@@ -16,6 +16,14 @@ from encryption_base import encrybase
 import argon2
 from argon2 import PasswordHasher
 
+class TypeMismatchFallback(Exception):
+    """Raised when a new-version upload targets a DB item of a different type (file vs folder).
+    The caller should fall back to a new_upload with an auto-generated nickname."""
+    def __init__(self, local_name: str, target_name: str):
+        self.local_name = local_name
+        self.target_name = target_name
+        super().__init__(f"Type mismatch fallback: local='{local_name}' target='{target_name}'")
+
 class EncryptionManager:
     def __init__(self, db, version_manager, utils, log, encryption):
         self.db = db
@@ -84,8 +92,9 @@ class EncryptionManager:
             target_root_name, target_relative_path, target_base_filename, _, target_itemid, _ = resolved_target_info
             is_target_folder_in_db = (target_itemid or "").lower().startswith('d')
         
-        if is_folder != is_target_folder_in_db:
-            raise ValueError(f"{user_mention}, Error: Type mismatch between local path and target DB item.")
+        # NOTE: Type mismatch is intentionally NOT checked here.
+        # _prepare_encryption_and_version (the caller) performs this check after
+        # receiving the resolved info, so it can send a proper user-facing message.
 
         # Fetch metadata using IDs
         latest_existing_item = await self.version_manager._get_item_metadata_for_versioning(
@@ -187,15 +196,19 @@ class EncryptionManager:
             resolved_parent_id = target_relative_path
             resolved_itemid = None
             
-            # Type check
+            # Type check — file vs folder mismatch triggers a graceful fallback new_upload
             is_target_folder_in_db = (target_root_id or "").lower().startswith('d')
             if is_target_folder_in_db != is_folder:
-                self.log.error("Local path type mismatch")
+                self.log.warning(
+                    f"[TYPE_MISMATCH] Local item '{root_upload_name}' type differs from DB target '{target_base_filename}'. "
+                    f"Triggering fallback new_upload."
+                )
                 await interaction.send(
-                    f"{interaction.user_mention}, Error: Local path type does not match target DB item type.",
+                    f"{interaction.user_mention}, ⚠️ **Type mismatch:** `{root_upload_name}` and `{target_base_filename}` are different types "
+                    f"(one is a file, the other a folder). Falling back to a new upload with an auto-generated name.",
                     ephemeral=False
                 )
-                raise ValueError("Local path type mismatch")
+                raise TypeMismatchFallback(root_upload_name, target_base_filename)
 
             # Determine Mode: Override inheritance if user provided a mode
             final_encryption_mode = encryption_mode if encryption_mode is not None else inherited_mode
