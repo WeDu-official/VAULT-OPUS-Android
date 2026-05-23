@@ -31,17 +31,17 @@ class UploadManager:
         self.user_uploading = user_uploading
         self.upload_semaphore = semaup
     async def _upload_chunk_to_discord(self, interaction: discord.Interaction, channel_id: int,
-                                   part_data: bytes, part_filename: str,
-                                   root_upload_name: str, base_filename: str, part_number: int,
-                                   total_parts: int, relative_path_in_archive: str, DB_FILE: str,
-                                   is_nicknamed: bool,
-                                   original_base_filename: str, is_base_filename_nicknamed: bool,
-                                   encryption_mode: str, encryption_key: Optional[bytes],
-                                   password_seed_hash: str, store_hash_flag: bool,
-                                   version: str,
-                                   overall_parts_uploaded_ref: Optional[List[int]] = None,
-                                   overall_total_parts: int = 0, itemid: str = "",
-                                   raw_chunk_size: int = 0, chunkhash: str = "") -> bool:
+                                       part_data: bytes, part_filename: str,
+                                       root_upload_name: str, base_filename: str, part_number: int,
+                                       total_parts: int, relative_path_in_archive: str, DB_FILE: str,
+                                       is_nicknamed: bool,
+                                       original_base_filename: str, is_base_filename_nicknamed: bool,
+                                       encryption_mode: str, encryption_key: Optional[bytes],
+                                       password_seed_hash: str, store_hash_flag: bool,
+                                       version: str,
+                                       overall_parts_uploaded_ref: Optional[List[int]] = None,
+                                       overall_total_parts: int = 0, itemid: str = "",
+                                       raw_chunk_size: int = 0, chunkhash: str = "") -> bool:
         channel = self.get_channel(channel_id)
         if not channel:
             channel = await self.bot.fetch_channel(channel_id)
@@ -49,7 +49,7 @@ class UploadManager:
         if not file_part_message:
             self.log.error(f"Failed to upload part {part_number} of itemid '{itemid}'.")
             return False
-        
+
         await self.db._store_file_metadata(
             root_upload_name=root_upload_name,
             base_filename=base_filename,
@@ -82,35 +82,35 @@ class UploadManager:
             )
         return True
     async def upload_single_file(self, interaction: discord.Interaction, file_path: str,
-                             DB_FILE: str, channel_id: int, root_upload_name: str,
-                             relative_path_in_archive: str = '',
-                             overall_parts_uploaded_ref: Optional[List[int]] = None,
-                             overall_total_parts: int = 0, is_top_level_single_file_upload: bool = False,
-                             is_nicknamed_flag_for_db: bool = False,
-                             encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
-                             password_seed_hash: str = "", store_hash_flag: bool = True,
-                             current_chunk_size: int = 0, version: str = "0.0.0.1",
-                             usrinput: bool = False, strictness_mode: str = "NA",
-                             itemid: str = "", root_id: Optional[str] = None,
-                             parent_id: Optional[str] = None,
-                             human_rel_path: Optional[str] = None,
-                             human_root_name: Optional[str] = None,
-                             minimize: str = "no",
-                             is_new_upload: bool = True):
-    
+                                 DB_FILE: str, channel_id: int, root_upload_name: str,
+                                 relative_path_in_archive: str = '',
+                                 overall_parts_uploaded_ref: Optional[List[int]] = None,
+                                 overall_total_parts: int = 0, is_top_level_single_file_upload: bool = False,
+                                 is_nicknamed_flag_for_db: bool = False,
+                                 encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
+                                 password_seed_hash: str = "", store_hash_flag: bool = True,
+                                 current_chunk_size: int = 0, version: str = "0.0.0.1",
+                                 usrinput: bool = False, strictness_mode: str = "NA",
+                                 itemid: str = "", root_id: Optional[str] = None,
+                                 parent_id: Optional[str] = None,
+                                 human_rel_path: Optional[str] = None,
+                                 human_root_name: Optional[str] = None,
+                                 minimize: str = "no",
+                                 is_new_upload: bool = True):
+
         user_mention = interaction.user_mention
-        
+
         if not itemid:
             itemid = await self.db._get_next_id(DB_FILE, 'f')
             self.log.info(f"[UPLOAD] Generated new itemid: {itemid}")
-        
+
         # Use provided IDs if available (for new_version mode)
         db_root_upload_name = root_id if root_id is not None else (root_upload_name if not is_top_level_single_file_upload else '')
         db_parent_id = parent_id if parent_id is not None else relative_path_in_archive
-        
+
         # In new versioning, the root ID and parent ID are fixed.
         # For new uploads, is_top_level_single_file_upload means it has no parent root ID.
-        
+
         self.log.info(f"DEBUG: upload_single_file called for '{file_path}' with human_root_name='{human_root_name}', human_rel_path='{human_rel_path}'")
         final_base, original_base, is_base_nicknamed = await self.utils._resolve_file_nickname(
             file_path, root_upload_name, is_top_level_single_file_upload,
@@ -130,14 +130,14 @@ class UploadManager:
             file_size, total_parts = self.utils._compute_file_parts(file_path, current_chunk_size)
             emptyfile = (total_parts == 0)
             passed = True
-            
+
             if not emptyfile:
                 import hashlib
                 async for part_number, chunk in self.utils._read_file_chunks(file_path, current_chunk_size):
                     part_filename = f"{final_base}.part{part_number:03d}"
                     raw_chunk_size = len(chunk)
                     chunkhash = hashlib.sha256(chunk).hexdigest()
-                    
+
                     matched_message_id = None
                     matched_channel_id = None
                     skip_upload = False
@@ -181,7 +181,7 @@ class UploadManager:
                     else:
                         # Encrypt and upload
                         enc_chunk = self.utils._encrypt_chunk_if_needed(chunk, encryption_mode, encryption_key, usrinput)
-                        
+
                         store_ch = chunkhash
                         store_rcs = raw_chunk_size
                         if encryption_mode == "not_automatic":
@@ -233,7 +233,7 @@ class UploadManager:
                 if overall_parts_uploaded_ref is not None:
                     overall_parts_uploaded_ref[0] += 1
                     overall_percentage = (overall_parts_uploaded_ref[0] / overall_total_parts) * 100 if overall_total_parts > 0 else 0
-            
+
             self.log.info(f"Finished uploading itemid '{itemid}' version '{version}'.")
             return passed
 
@@ -287,32 +287,32 @@ class UploadManager:
             self.log.info(f"Uploaded file '{file_path}' in folder '{relative_folder_path}' version '{version}'.")
         return passed
     async def _walk_and_upload(self, interaction: discord.Interaction, local_folder_path: str,
-                           DB_FILE: str, channel_id: int, root_upload_name: str,
-                           overall_parts_uploaded_ref: List[int], overall_total_parts: int,
-                           is_nicknamed_flag: bool = False,
-                           encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
-                           password_seed_hash: str = "", store_hash_flag: bool = True,
-                           current_chunk_size: int = 0, version: str = "0.0.0.1",
-                           usrinput: bool = False, strictness_mode: str = "NA",
-                           root_itemid: str = "",
-                           human_root_name: Optional[str] = None,
-                           minimize: str = "no",
-                           is_new_upload: bool = True):
+                               DB_FILE: str, channel_id: int, root_upload_name: str,
+                               overall_parts_uploaded_ref: List[int], overall_total_parts: int,
+                               is_nicknamed_flag: bool = False,
+                               encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
+                               password_seed_hash: str = "", store_hash_flag: bool = True,
+                               current_chunk_size: int = 0, version: str = "0.0.0.1",
+                               usrinput: bool = False, strictness_mode: str = "NA",
+                               root_itemid: str = "",
+                               human_root_name: Optional[str] = None,
+                               minimize: str = "no",
+                               is_new_upload: bool = True):
         passed = True
         folder_info_map = {"": root_itemid}
-        
+
         for root, dirs, files in os.walk(local_folder_path, followlinks=False):
             relative_folder_path = os.path.relpath(root, local_folder_path)
             if relative_folder_path == '.':
                 relative_folder_path = ''
             else:
                 relative_folder_path = relative_folder_path.replace(os.path.sep, '/')
-            
+
             current_folder_id = folder_info_map[relative_folder_path]
-            
+
             for i, dir_name in enumerate(dirs):
                 folder_id = await self.db._get_next_id(DB_FILE, 'd')
-                
+
                 await self.utils._process_subfolder(
                     root_upload_name=root_upload_name,
                     folder_relative_path=current_folder_id,
@@ -327,12 +327,12 @@ class UploadManager:
                     itemid=folder_id,
                     is_new_upload=is_new_upload
                 )
-                
+
                 child_rel_name_path = os.path.join(relative_folder_path, dir_name).replace(os.path.sep, '/')
                 if child_rel_name_path.startswith('/'):
                     child_rel_name_path = child_rel_name_path[1:]
                 folder_info_map[child_rel_name_path] = folder_id
-            
+
             if files:
                 fully_uploaded = await self._process_files_in_folder(
                     interaction=interaction,
@@ -362,19 +362,19 @@ class UploadManager:
                     break
         return passed
     async def upload_folder_contents(self, interaction: discord.Interaction, local_folder_path: str,
-                                 DB_FILE: str, channel_id: int, root_upload_name: str,  # Display name
-                                 overall_uploaded_parts_ref: List[int], overall_total_parts: int,
-                                 is_nicknamed_flag_for_db: bool = False,
-                                 encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
-                                 password_seed_hash: str = "", store_hash_flag: bool = True,
-                                 current_chunk_size: int = 0, version: str = "0.0.0.1",
-                                 usrinput: bool = False, strictness_mode: str = "NA",
-                                 itemid: Optional[str] = None, parent_id: Optional[str] = None,
-                                 root_id: Optional[str] = None, minimize: str = "no",
-                                 is_new_upload: bool = True):
+                                     DB_FILE: str, channel_id: int, root_upload_name: str,  # Display name
+                                     overall_uploaded_parts_ref: List[int], overall_total_parts: int,
+                                     is_nicknamed_flag_for_db: bool = False,
+                                     encryption_mode: str = "off", encryption_key: Optional[bytes] = None,
+                                     password_seed_hash: str = "", store_hash_flag: bool = True,
+                                     current_chunk_size: int = 0, version: str = "0.0.0.1",
+                                     usrinput: bool = False, strictness_mode: str = "NA",
+                                     itemid: Optional[str] = None, parent_id: Optional[str] = None,
+                                     root_id: Optional[str] = None, minimize: str = "no",
+                                     is_new_upload: bool = True):
         user_mention = interaction.user_mention
         total_files = sum(len(f) for _, _, f in os.walk(local_folder_path))
-        
+
         # Generate root folder ID (d0, d1, etc.) if not provided
         root_itemid = itemid or await self.db._get_next_id(DB_FILE, 'd')
         db_parent_id = parent_id if parent_id is not None else ''
@@ -426,10 +426,10 @@ class UploadManager:
             minimize=minimize,
             is_new_upload=is_new_upload
         )
-        
+
         if strictness_mode == "HA" and not fully_uploaded:
             return False
-        
+
         await self.baseapi.edit_message_robustly(
             interaction,
             content=f"{user_mention}, Completed processing all files and folders in '{display_name}' version '{version}'. Finalizing upload..."
@@ -438,13 +438,13 @@ class UploadManager:
         return True
 
     async def _determine_root_name(
-        self, interaction: discord.Interaction, db_file: str,
-        local_path: str,
-        custom_root_name: Optional[str] = None,
-        user_mention: str = "",
-        forced_length_limit: int = 60,
-        skip_db_checks: bool = False,
-        name_check: bool = True
+            self, interaction: discord.Interaction, db_file: str,
+            local_path: str,
+            custom_root_name: Optional[str] = None,
+            user_mention: str = "",
+            forced_length_limit: int = 60,
+            skip_db_checks: bool = False,
+            name_check: bool = True
     ) -> Tuple[str, str, bool]:
         """
         Determines display name for the upload.
@@ -468,7 +468,7 @@ class UploadManager:
                 db_original = f.get('original_base_filename', '')
                 if name == db_name or name == db_original:
                     return True
-            
+
             # Top-level files
             file_results_raw = await self.db._db_read_sync(db_file, {
                 "root_upload_name": "",
@@ -493,7 +493,7 @@ class UploadManager:
                 if custom_root_name != effective_root_name:
                     return custom_root_name, effective_root_name, True
                 return custom_root_name, effective_root_name, False
-            
+
             if len(effective_root_name) > forced_length_limit:
                 return self.encry._generate_random_nickname_seed(), effective_root_name, True
             return effective_root_name, effective_root_name, False
@@ -603,11 +603,20 @@ class UploadManager:
             current_version_for_upload: str,
             file_table_columns: list[str],
             uploaded_parts: int,
-            total_parts: int,automatic_removal_or_user_choice:bool=False
+            total_parts: int,
+            automatic_removal_or_user_choice: bool = False,
+            root_itemid: Optional[str] = None,
+            id_based: bool = False
     ):
         """
         Sends an interactive message to the user if an upload is incomplete,
         allowing them to remove the incomplete upload or keep it.
+
+        Args:
+            root_itemid: The itemid (e.g. 'd0', 'f0') of the uploaded item. Used for
+                        precise cleanup in the ID-based architecture.
+            id_based: Whether to use ID-based deletion (should be True for all
+                     modern uploads that use the itemid system).
         """
         user_mention = interaction.user_mention
         from delete import DeleteContext
@@ -619,16 +628,23 @@ class UploadManager:
             intents=self.bot.intents,
             interaction=interaction
         )
+
+        # Determine the deletion target: prefer itemid for ID-based cleanup,
+        # fall back to display name only if itemid is not available (legacy)
+        delete_target = root_itemid if (id_based and root_itemid) else root_upload_name
+        use_id_based = id_based and bool(root_itemid)
+
         if automatic_removal_or_user_choice:
             await delete_ctx.deletea(
-                target_path=root_upload_name,
+                target_path=delete_target,
                 DB_FILE=DATABASE_FILE,
                 version_param=current_version_for_upload,
                 all_versions_param=False,
-                skip_confirmation=True
+                skip_confirmation=True,
+                id_based=use_id_based
             )
         else:
-            #build the message
+            # Build the message
             problem_message_prefix = f"{user_mention}, **Upload Incomplete!** "
             problem_message_detail = (
                 f"The upload process for `{root_upload_name}` (Version: {current_version_for_upload}) did not complete 100%. "
@@ -645,11 +661,12 @@ class UploadManager:
             response = await interaction.prompt_input("Do you want to remove the incomplete upload? (yes/no): ")
             if response.lower() in ["y", "yes"]:
                 await delete_ctx.deletea(
-                    target_path=root_upload_name,
+                    target_path=delete_target,
                     DB_FILE=DATABASE_FILE,
                     version_param=current_version_for_upload,
                     all_versions_param=False,
-                    skip_confirmation=True
+                    skip_confirmation=True,
+                    id_based=use_id_based
                 )
                 print("[CLI] Operation completed.")
             else:
@@ -692,19 +709,19 @@ class UploadManager:
         """
         import datetime
         self.log.info(f"[ADDITION] Duplicating metadata for itemid '{target_itemid}' from version '{source_version}' to '{new_version}'")
-        
+
         # 1. Fetch all entries to identify what to duplicate
         all_entries = await self.db._db_read_sync(db_file, {})
-        
+
         # Identify items to duplicate:
         # - The target item itself (itemid == target_itemid AND version == source_version)
         # - Its descendants (root_upload_name == target_itemid AND version == source_version)
         to_duplicate = [
-            e for e in all_entries 
-            if (e.get('itemid') == target_itemid or e.get('root_upload_name') == target_itemid) 
-            and e.get('version') == source_version
+            e for e in all_entries
+            if (e.get('itemid') == target_itemid or e.get('root_upload_name') == target_itemid)
+               and e.get('version') == source_version
         ]
-        
+
         if not to_duplicate:
             self.log.warning(f"[ADDITION] No entries found to duplicate for itemid '{target_itemid}' version '{source_version}'")
             return
@@ -725,22 +742,22 @@ class UploadManager:
         for entry in to_duplicate:
             new_entry = entry.copy()
             old_id = entry.get('itemid')
-            
+
             # Apply transformations
             new_entry['itemid'] = id_map.get(old_id, old_id)
             new_entry['version'] = new_version
             new_entry['upload_timestamp'] = new_timestamp
-            
+
             # Remap parent reference (relative_path_in_archive stores parent itemid)
             old_rel = entry.get('relative_path_in_archive')
             if old_rel in id_map:
                 new_entry['relative_path_in_archive'] = id_map[old_rel]
-                
+
             # Remap root reference (root_upload_name stores root itemid for children)
             old_root = entry.get('root_upload_name')
             if old_root in id_map:
                 new_entry['root_upload_name'] = id_map[old_root]
-            
+
             # Insert cloned entry
             # We use _db_insert_sync directly to bypass folder existence checks in _store_folder_metadata
             await self.db._db_insert_sync(db_file, new_entry)

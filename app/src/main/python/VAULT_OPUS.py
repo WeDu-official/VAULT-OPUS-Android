@@ -217,7 +217,7 @@ async def run_cli(args_list=None):
     token = get_bot_token()
     if not token: return
     bot_task = asyncio.create_task(bot.start(token))
-    
+
     try:
         await asyncio.wait_for(bot.wait_until_ready(), timeout=30.0)
         if args.command in ["upload", "update"]:
@@ -238,14 +238,14 @@ async def run_cli(args_list=None):
             if args.minimize == "yes" and args.encryption_mode == "not_automatic":
                 args.encryption_mode = "automatic"; args.password_seed = None; args.random_seed = False
             success = await uploader.uploada(
-                interaction=ph, local_path=args.local_path, DB_FILE=args.database_file, 
-                channel_id=int(args.channel_id) if args.channel_id else get_channel_id(), 
-                custom_root_name=args.upload_name, encryption_mode=args.encryption_mode, 
-                user_seed=args.password_seed, random_seed=args.random_seed, 
-                save_hash=(args.save_hash == "True"), upload_mode=args.upload_mode if args.command == "upload" else "new_version", 
-                target_item_path=args.target_item_path, new_version_string=args.new_version_string, 
-                name_check=getattr(args, "name_check", True), strictness_mode=args.strictness_mode, 
-                chunk_size_mb=args.chunk_size_mb, id_based=args.id_based, 
+                interaction=ph, local_path=args.local_path, DB_FILE=args.database_file,
+                channel_id=int(args.channel_id) if args.channel_id else get_channel_id(),
+                custom_root_name=args.upload_name, encryption_mode=args.encryption_mode,
+                user_seed=args.password_seed, random_seed=args.random_seed,
+                save_hash=(args.save_hash == "True"), upload_mode=args.upload_mode if args.command == "upload" else "new_version",
+                target_item_path=args.target_item_path, new_version_string=args.new_version_string,
+                name_check=getattr(args, "name_check", True), strictness_mode=args.strictness_mode,
+                chunk_size_mb=args.chunk_size_mb, id_based=args.id_based,
                 addition_mode=args.addition, source_version=args.source_version, minimize=args.minimize
             )
             if not success: sys.exit(1)
@@ -261,10 +261,23 @@ async def run_cli(args_list=None):
             # tuple-keyed seed dict that download.py's _get_file_encryption_key expects.
             seed = {}
             all_versions = (args.all_versions == "yes")
-            st_version = args.st_version; en_version = args.en_version; version = args.version
-            if version != '': st_version = False; en_version = False; all_versions = False
-            elif st_version != '' and en_version != '': all_versions = False
-            can_apply_version_filters = not (version == False and st_version == False and en_version == False and all_versions == False)
+            st_version = args.st_version
+            en_version = args.en_version
+            version = args.version
+
+            # Priority: specific version > version range > all versions > none (default/latest)
+            if version:
+                # Specific version takes precedence — clear range and all-flags
+                st_version = ""
+                en_version = ""
+                all_versions = False
+            elif st_version and en_version:
+                # Version range takes precedence — clear all-flags
+                all_versions = False
+            # else: all_versions flag controls, or if False, use default/latest
+
+            # Only apply version filters if at least one modifier is actually provided
+            can_apply_version_filters = bool(version or (st_version and en_version) or all_versions)
 
             from downloadtools.download_database import DDB
             temp_ddb = DDB(version_manager, interaction=None)
@@ -296,7 +309,7 @@ async def run_cli(args_list=None):
                         if clean_display_name in pwd_dict: cli_provided_seed = pwd_dict[clean_display_name]; break
                         if "undefined" in pwd_dict: cli_provided_seed = pwd_dict["undefined"]; break
                         if "*" in pwd_dict: cli_provided_seed = pwd_dict["*"]; break
-                    
+
                     current_user_seed = cli_provided_seed
                     # Advanced resolution: check folder_path and target_path directly in pwd_dict
                     if not current_user_seed and folder_path in pwd_dict:
@@ -330,10 +343,10 @@ async def run_cli(args_list=None):
             from delete import DeleteContext
             ctx = DeleteContext(bot=bot, file_table_columns=file_table_columns, log=log, intents=intents, interaction=ph)
             success = await ctx.deletea(
-                target_path=args.target_path, DB_FILE=args.database_file, 
-                nuke=args.nuke, version_param=args.version, 
+                target_path=args.target_path, DB_FILE=args.database_file,
+                nuke=args.nuke, version_param=args.version,
                 st_version_param=args.st_version, en_version_param=args.en_version,
-                all_versions_param=(args.all_versions == "yes"), id_based=args.id_based, 
+                all_versions_param=(args.all_versions == "yes"), id_based=args.id_based,
                 delete_type=getattr(args, "delete_type", "soft"),
                 skip_confirmation=(args.skip_confirmation == "yes")
             )
@@ -342,11 +355,11 @@ async def run_cli(args_list=None):
             from modify import ModifyContext
             ctx = ModifyContext(bot, file_table_columns, log, ph)
             success = False
-            if args.modify_command == "move": 
+            if args.modify_command == "move":
                 success = await ctx.movea(from_path=args.src, to_path=args.dst, DB_FILE=args.database_file, copy_mode=args.copy_mode, id_based=args.id_based, name_check=getattr(args, "name_check", True), src_id_based=getattr(args, "src_id_based", False), dst_id_based=getattr(args, "dst_id_based", False))
-            elif args.modify_command == "rename": 
+            elif args.modify_command == "rename":
                 success = await ctx.renamea(item_path=args.item, new_name=args.new_name, name_mode=getattr(args, "name_mode", "D"), id_based=args.id_based, name_check=getattr(args, "name_check", True), DB_FILE=args.database_file)
-            elif args.modify_command == "makefolder": 
+            elif args.modify_command == "makefolder":
                 success = await ctx.makefoldera(folder_name=args.folder_name, DB_FILE=args.database_file, parent_path=args.parent, id_based=args.id_based, name_check=getattr(args, "name_check", True))
             if not success: sys.exit(1)
         elif args.command == "makepkg":

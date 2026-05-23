@@ -60,14 +60,14 @@ class UPLOAD:
         automatic_removal_or_user_choice = await self.utils.determine_choice(strictness_mode)
         # Step 2: determine name
         root_upload_name, _, is_nicknamed_flag_for_db = await self.upmang._determine_root_name(interaction=interaction,
-            db_file=DATABASE_FILE,
-            local_path=local_path,
-            custom_root_name=custom_root_name,
-            user_mention=user_mention,
-            forced_length_limit=60,
-            skip_db_checks=(upload_mode == "new_version"),
-            name_check=name_check
-        )
+                                                                                               db_file=DATABASE_FILE,
+                                                                                               local_path=local_path,
+                                                                                               custom_root_name=custom_root_name,
+                                                                                               user_mention=user_mention,
+                                                                                               forced_length_limit=60,
+                                                                                               skip_db_checks=(upload_mode == "new_version"),
+                                                                                               name_check=name_check
+                                                                                               )
 
         if not root_upload_name:
             return False
@@ -188,7 +188,7 @@ class UPLOAD:
                 latest_entry = await self.version_manager._get_latest_version(DATABASE_FILE, resolved_root_id)
                 if latest_entry:
                     actual_source_version = latest_entry.get('version')
-            
+
             if actual_source_version:
                 await self.upmang.duplicate_version_metadata(
                     DATABASE_FILE,
@@ -257,7 +257,10 @@ class UPLOAD:
                     current_version_for_upload,
                     self.file_table_columns,
                     uploaded_parts=overall_uploaded_parts_ref[0],
-                    total_parts=overall_total_parts,automatic_removal_or_user_choice=automatic_removal_or_user_choice
+                    total_parts=overall_total_parts,
+                    automatic_removal_or_user_choice=automatic_removal_or_user_choice,
+                    root_itemid=resolved_itemid,
+                    id_based=True
                 )
             # --- Step 9: Validate upload completion ---
             if overall_uploaded_parts_ref[0] != overall_total_parts:
@@ -293,7 +296,10 @@ class UPLOAD:
                     current_version_for_upload,
                     self.file_table_columns,
                     uploaded_parts=overall_uploaded_parts_ref[0],
-                    total_parts=overall_total_parts, automatic_removal_or_user_choice=automatic_removal_or_user_choice
+                    total_parts=overall_total_parts,
+                    automatic_removal_or_user_choice=automatic_removal_or_user_choice,
+                    root_itemid=resolved_itemid,
+                    id_based=True
                 )
 
             # --- Step 11: Release semaphore and clean up user_uploading state ---

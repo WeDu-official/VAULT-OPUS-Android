@@ -2,7 +2,6 @@
 #server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release* (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
-
 import os
 import sys
 import platform
@@ -182,7 +181,6 @@ class TaskManager:
     def __init__(self, config_path):
         self.config_path = config_path
         self.semaphores = {}
-        self.start_lock = asyncio.Lock()
         self.refresh()
 
     def refresh(self):
@@ -606,66 +604,161 @@ class WSStream(io.IOBase):
 
 @app.websocket("/ws/cli")
 async def websocket_endpoint(websocket: WebSocket):
-    try: await manager.connect(websocket)
-    except Exception as e: logger.error(f"--- [WS CONNECTION ERROR] {str(e)} ---"); return
+    try: 
+        await manager.connect(websocket)
+    except Exception as e: 
+        logger.error(f"--- [WS CONNECTION ERROR] {str(e)} ---")
+        return
+
     active_tasks = {}
+
     async def run_task(task_id, command_args):
         input_file_path = None
         try:
             cmd_type = command_args[0] if command_args else ""
+
+            # Create input file for commands that need user interaction
             if cmd_type in ("upload", "update", "download", "delete"):
-                input_fd, input_file_path = tempfile.mkstemp(suffix=".json", prefix=f"vault_input_{task_id}_", dir=WRITABLE_DIR)
+                input_fd, input_file_path = tempfile.mkstemp(
+                    suffix=".json", 
+                    prefix=f"vault_input_{task_id}_", 
+                    dir=WRITABLE_DIR
+                )
                 os.close(input_fd)
-                with open(input_file_path, "w") as f: json.dump({"status": "idle"}, f)
-                if "--inputfile" not in command_args: command_args.extend(["--inputfile", input_file_path])
+                with open(input_file_path, "w") as f:
+                    json.dump({"status": "idle"}, f)
+                if "--inputfile" not in command_args:
+                    command_args.extend(["--inputfile", input_file_path])
+
+            # Get the appropriate semaphore for this command type
             semaphore = task_manager.get_semaphore(cmd_type)
-            await manager.send_message(json.dumps({"type": "status", "task_id": task_id, "data": "Queued...\n"}), websocket)
+
+            await manager.send_message(
+                json.dumps({"type": "status", "task_id": task_id, "data": "Queued...\n"}), 
+                websocket
+            )
+
+            # Acquire semaphore — this is the ONLY concurrency gate needed.
+            # Multiple tasks of the same type can run concurrently up to the limit.
+            # Different types (upload vs download) run independently.
             async with semaphore:
-                async with task_manager.start_lock:
-                    await asyncio.sleep(1); loop = asyncio.get_running_loop(); stream = WSStream(websocket, task_id, loop); active_tasks[task_id] = {"input_file_path": input_file_path}
-                    async def watch_input():
-                        last_hash = None
-                        while task_id in active_tasks:
-                            if not input_file_path or not os.path.exists(input_file_path): break
-                            try:
-                                with open(input_file_path, "r") as f: data = json.load(f)
-                                if data.get("status") == "waiting":
-                                    h = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
-                                    if h != last_hash: await manager.send_message(json.dumps({"type": "prompt", "task_id": task_id, "prompt": data.get("prompt"), "is_password": data.get("is_password")}), websocket); last_hash = h
-                            except: pass
-                            await asyncio.sleep(0.5)
-                    watcher = asyncio.create_task(watch_input()); import VAULT_OPUS; stdout_orig = sys.stdout; stderr_orig = sys.stderr; sys.stdout = stream; sys.stderr = stream
+                loop = asyncio.get_running_loop()
+                stream = WSStream(websocket, task_id, loop)
+                active_tasks[task_id] = {"input_file_path": input_file_path}
+
+                async def watch_input():
+                    last_hash = None
+                    while task_id in active_tasks:
+                        if not input_file_path or not os.path.exists(input_file_path):
+                            break
+                        try:
+                            with open(input_file_path, "r") as f:
+                                data = json.load(f)
+                            if data.get("status") == "waiting":
+                                h = hashlib.sha256(
+                                    json.dumps(data, sort_keys=True).encode()
+                                ).hexdigest()
+                                if h != last_hash:
+                                    await manager.send_message(
+                                        json.dumps({
+                                            "type": "prompt", 
+                                            "task_id": task_id,
+                                            "prompt": data.get("prompt"),
+                                            "is_password": data.get("is_password")
+                                        }), 
+                                        websocket
+                                    )
+                                    last_hash = h
+                        except:
+                            pass
+                        await asyncio.sleep(0.5)
+
+                watcher = asyncio.create_task(watch_input())
+
+                # Redirect stdout/stderr for THIS task only
+                stdout_orig = sys.stdout
+                stderr_orig = sys.stderr
+                sys.stdout = stream
+                sys.stderr = stream
+
+                try:
+                    exit_code = 0
                     try:
-                        exit_code = 0
-                        try: await VAULT_OPUS.run_cli(command_args)
-                        except SystemExit as e: exit_code = e.code or 0
-                        except Exception as e: logger.error(f"Task {task_id} failed: {e}"); stream.write(f"\nError: {str(e)}\n"); exit_code = 1
-                    finally: sys.stdout = stdout_orig; sys.stderr = stderr_orig
+                        import VAULT_OPUS
+                        await VAULT_OPUS.run_cli(command_args)
+                    except SystemExit as e:
+                        exit_code = e.code or 0
+                    except Exception as e:
+                        logger.error(f"Task {task_id} failed: {e}")
+                        stream.write(f"\nError: {str(e)}\n")
+                        exit_code = 1
+                finally:
+                    sys.stdout = stdout_orig
+                    sys.stderr = stderr_orig
                     watcher.cancel()
-            await manager.send_message(json.dumps({"type": "exit", "task_id": task_id, "code": exit_code}), websocket)
+                    try:
+                        await watcher
+                    except asyncio.CancelledError:
+                        pass
+
+            await manager.send_message(
+                json.dumps({"type": "exit", "task_id": task_id, "code": exit_code}), 
+                websocket
+            )
+
         finally:
             if input_file_path and os.path.exists(input_file_path):
-                try: os.remove(input_file_path)
-                except: pass
-            if task_id in active_tasks: del active_tasks[task_id]
+                try:
+                    os.remove(input_file_path)
+                except:
+                    pass
+            if task_id in active_tasks:
+                del active_tasks[task_id]
+
     try:
         while True:
-            data = await websocket.receive_text(); payload = json.loads(data); action, task_id = payload.get("action"), payload.get("task_id", "default")
-            if action == "run": asyncio.create_task(run_task(task_id, payload.get("args", [])))
+            data = await websocket.receive_text()
+            payload = json.loads(data)
+            action = payload.get("action")
+            task_id = payload.get("task_id", "default")
+
+            if action == "run":
+                asyncio.create_task(run_task(task_id, payload.get("args", [])))
             elif action == "input" and task_id in active_tasks:
-                if (path := active_tasks[task_id].get("input_file_path")) and os.path.exists(path):
+                path = active_tasks[task_id].get("input_file_path")
+                if path and os.path.exists(path):
                     try:
-                        with open(path, "w") as f: json.dump({"status": "responded", "response": payload.get("data", "")}, f)
-                    except: pass
-    except WebSocketDisconnect: manager.disconnect(websocket)
+                        with open(path, "w") as f:
+                            json.dump(
+                                {"status": "responded", "response": payload.get("data", "")}, 
+                                f
+                            )
+                    except:
+                        pass
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
 
 def start_server():
     import uvicorn
-    logger.info("Starting VAULT_OPUS Uvicorn Server on 0.0.0.0:8000")
+    logger.info("Starting VAULT OPUS Uvicorn Server on 0.0.0.0:8000")
     try:
-        config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info", access_log=True, timeout_keep_alive=65, workers=1)
-        config.install_signal_handlers = False; server = uvicorn.Server(config); server.run()
-    except Exception as e: logger.error(f"Uvicorn crashed: {e}")
+        config = uvicorn.Config(
+            app, 
+            host="0.0.0.0", 
+            port=8000, 
+            log_level="info", 
+            access_log=True, 
+            timeout_keep_alive=65, 
+            workers=1
+        )
+        config.install_signal_handlers = False
+        server = uvicorn.Server(config)
+        server.run()
+    except Exception as e:
+        logger.error(f"Uvicorn crashed: {e}")
+
 
 if __name__ == "__main__":
     start_server()
