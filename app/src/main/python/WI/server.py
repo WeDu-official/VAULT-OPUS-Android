@@ -642,11 +642,21 @@ async def websocket_endpoint(websocket: WebSocket):
             # Multiple tasks of the same type can run concurrently up to the limit.
             # Different types (upload vs download) run independently.
             async with semaphore:
+                await manager.send_message(
+                    json.dumps({"type": "status", "task_id": task_id, "data": "Running...\n"}),
+                    websocket
+                )
                 loop = asyncio.get_running_loop()
                 stream = WSStream(websocket, task_id, loop)
                 active_tasks[task_id] = {"input_file_path": input_file_path}
 
+                # Inject the prompt event into PlatformHandler for synchronous waiting
+                # This is set after the event is created below (see the watch_input replacement)
+                prompt_event = asyncio.Event()
+                prompt_response = None
+
                 async def watch_input():
+                    """Watch for frontend prompt responses via the input file."""
                     last_hash = None
                     while task_id in active_tasks:
                         if not input_file_path or not os.path.exists(input_file_path):
@@ -661,19 +671,31 @@ async def websocket_endpoint(websocket: WebSocket):
                                 if h != last_hash:
                                     await manager.send_message(
                                         json.dumps({
-                                            "type": "prompt", 
+                                            "type": "prompt",
                                             "task_id": task_id,
                                             "prompt": data.get("prompt"),
                                             "is_password": data.get("is_password")
-                                        }), 
+                                        }),
                                         websocket
                                     )
                                     last_hash = h
+                            elif data.get("status") == "responded":
+                                # Signal the waiting prompt_input() coroutine
+                                nonlocal prompt_response
+                                prompt_response = data.get("response", "")
+                                prompt_event.set()
+                                # Reset file to prevent re-processing
+                                with open(input_file_path, "w") as f:
+                                    json.dump({"status": "idle"}, f)
                         except:
                             pass
                         await asyncio.sleep(0.5)
 
                 watcher = asyncio.create_task(watch_input())
+
+                # Store the event in active_tasks so prompt_input() can access it
+                active_tasks[task_id]["prompt_event"] = prompt_event
+                active_tasks[task_id]["prompt_response_ref"] = lambda: prompt_response
 
                 # Redirect stdout/stderr for THIS task only
                 stdout_orig = sys.stdout
@@ -707,6 +729,9 @@ async def websocket_endpoint(websocket: WebSocket):
             )
 
         finally:
+            # Signal any waiting prompt to unblock (task is ending)
+            if task_id in active_tasks and "prompt_event" in active_tasks[task_id]:
+                active_tasks[task_id]["prompt_event"].set()
             if input_file_path and os.path.exists(input_file_path):
                 try:
                     os.remove(input_file_path)
@@ -730,11 +755,15 @@ async def websocket_endpoint(websocket: WebSocket):
                     try:
                         with open(path, "w") as f:
                             json.dump(
-                                {"status": "responded", "response": payload.get("data", "")}, 
+                                {"status": "responded", "response": payload.get("data", "")},
                                 f
                             )
                     except:
                         pass
+                # Signal the event AFTER writing the file
+                # so prompt_input() sees the response when it wakes
+                if "prompt_event" in active_tasks[task_id]:
+                    active_tasks[task_id]["prompt_event"].set()
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

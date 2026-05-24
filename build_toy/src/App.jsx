@@ -469,57 +469,55 @@ export default function App() {
       }
     };
 
-    socket.onmessage = e => {
-      const msg = JSON.parse(e.data);
-      const tid = msg.task_id;
-      const line = msg.data || '';
-      if (msg.type === 'stdout' || msg.type === 'stderr') {
-        setTerminalOutput(p => p + line);
+        socket.onmessage = e => {
+          const msg = JSON.parse(e.data);
+          const tid = msg.task_id;
+          const line = msg.data || '';
+          if (msg.type === 'stdout' || msg.type === 'stderr') {
+            setTerminalOutput(p => p + line);
 
-        // Detect type-mismatch fallback sentinel and show a modal dialog
-        // Format: [DIALOG:TYPE_MISMATCH]<local_name>|<target_name>|<fallback_nickname>
-        const dialogMatch = line.match(/\[DIALOG:TYPE_MISMATCH\]([^|]+)\|([^|]+)\|(.+)/);
-        if (dialogMatch) {
-          const [, localName, targetName, fallbackNickname] = dialogMatch;
-          setModal({
-            title: '⚠️ Type Mismatch — Converted to New Upload',
-            content: (
-              <div className="space-y-4">
-                <p className="text-sm text-amber-300 leading-relaxed">
-                  The upload for <span className="font-bold text-white">"{localName}"</span> could not be saved as a new version of <span className="font-bold text-white">"{targetName}"</span> because one is a file and the other is a folder.
-                </p>
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  It has been automatically re-submitted as a <span className="font-bold text-white">NEW UPLOAD</span> with the auto-generated name:
-                </p>
-                <div className="p-3 bg-[#060d1a] border border-amber-500/30 rounded-xl font-mono text-xs text-amber-300 break-all">
-                  {fallbackNickname}
-                </div>
-              </div>
-            ),
-            onClose: () => setModal(null)
-          });
-        }
+            // Detect type-mismatch fallback sentinel and show a modal dialog
+            const dialogMatch = line.match(/\[DIALOG:TYPE_MISMATCH\]([^|]+)\|([^|]+)\|(.+)/);
+            if (dialogMatch) {
+              const [, localName, targetName, fallbackNickname] = dialogMatch;
+              setModal({
+                title: '⚠️ Type Mismatch — Converted to New Upload',
+                content: (
+                  <div className="space-y-4">
+                    <p className="text-sm text-amber-300 leading-relaxed">
+                      The upload for <span className="font-bold text-white">"{localName}"</span> could not be saved as a new version of <span className="font-bold text-white">"{targetName}"</span> because one is a file and the other is a folder.
+                    </p>
+                    <p className="text-sm text-gray-400 leading-relaxed">
+                      It has been automatically re-submitted as a <span className="font-bold text-white">NEW UPLOAD</span> with the auto-generated name:
+                    </p>
+                    <div className="p-3 bg-[#060d1a] border border-amber-500/30 rounded-xl font-mono text-xs text-amber-300 break-all">
+                      {fallbackNickname}
+                    </div>
+                  </div>
+                ),
+                onClose: () => setModal(null)
+              });
+            }
 
-        const progressMatch = line.match(/Overall.*Progress.*\((\d+)%\)/i) || line.match(/Overall:.*\((\d+)%\)/i);
-        setQueue(q => q.map(i => {
-          if (i.id !== tid) return i;
-          let status = i.status === 'queued' ? 'running' : i.status;
-          if (line.includes('[OP_SUCCESS]')) return { ...i, status: 'completed', progress: 100 };
-          if (line.includes('[OP_FAILURE]')) return { ...i, status: 'failed' };
-          if (progressMatch) return { ...i, status: 'running', progress: parseInt(progressMatch[1], 10) };
-          return { ...i, status };
-        }));
-      } else if (msg.type === 'status') {
-        setQueue(q => q.map(i => i.id === tid ? { ...i, status: line.includes('Queued') ? 'queued' : 'running' } : i));
-      } else if (msg.type === 'prompt') {
-        setPromptQueue(prev => [...prev, { text: msg.prompt, isPassword: msg.is_password, taskId: tid }]);
-      } else if (msg.type === 'exit') {
-        setTerminalOutput(p => p + `\n[Process ${tid} exited with code: ${msg.code}]\n`);
-        setQueue(q => q.map(i => i.id === tid ? { ...i, status: msg.code === 0 ? 'completed' : 'failed', progress: msg.code === 0 ? 100 : i.progress } : i));
-        if (msg.code === 0) { showToast('Operation completed', 'success'); setTimeout(() => { fetchFiles(currentPath); }, 300); }
-        else showToast('Operation failed', 'error');
-      }
-    };
+            const progressMatch = line.match(/Overall.*Progress.*\((\d+)%\)/i) || line.match(/Overall:.*\((\d+)%\)/i);
+            setQueue(q => q.map(i => {
+              if (i.id !== tid) return i;
+              if (line.includes('[OP_SUCCESS]')) return { ...i, status: 'completed', progress: 100 };
+              if (line.includes('[OP_FAILURE]')) return { ...i, status: 'failed' };
+              if (progressMatch) return { ...i, status: 'running', progress: parseInt(progressMatch[1], 10) };
+              return i;
+            }));
+          } else if (msg.type === 'status') {
+            setQueue(q => q.map(i => i.id === tid ? { ...i, status: line.includes('Queued') ? 'queued' : 'running' } : i));
+          } else if (msg.type === 'prompt') {
+            setPromptQueue(prev => [...prev, { text: msg.prompt, isPassword: msg.is_password, taskId: tid }]);
+          } else if (msg.type === 'exit') {
+            setTerminalOutput(p => p + `\n[Process ${tid} exited with code: ${msg.code}]\n`);
+            setQueue(q => q.map(i => i.id === tid ? { ...i, status: msg.code === 0 ? 'completed' : 'failed', progress: msg.code === 0 ? 100 : i.progress } : i));
+            if (msg.code === 0) { showToast('Operation completed', 'success'); setTimeout(() => { fetchFiles(currentPath); }, 300); }
+            else showToast('Operation failed', 'error');
+          }
+        };
 
     socket.onclose = () => {
       setWs(null);

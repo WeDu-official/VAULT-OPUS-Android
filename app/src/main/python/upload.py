@@ -287,8 +287,9 @@ class UPLOAD:
             return False
 
         finally:
-            # --- Step 10: Handle incomplete uploads ---
-            if not upload_successful:
+            # --- Step 10: Handle incomplete uploads (only if not already handled) ---
+            if not upload_successful and not getattr(self, '_upload_cleanup_done', False):
+                self._upload_cleanup_done = True
                 await self.upmang._handle_incomplete_upload(
                     interaction,
                     root_upload_name,

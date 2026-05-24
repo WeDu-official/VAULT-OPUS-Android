@@ -106,12 +106,14 @@ class PlatformHandler:
 
     async def prompt_input(self, prompt_text: str, is_password: bool = False) -> str:
         """
-        CLI input handler with optional file-based polling for Web GUI support.
+        CLI input handler with Web GUI support.
+        Uses asyncio.Event for synchronous waiting when available,
+        falls back to file polling.
         """
         if self.platform == "discord":
             raise RuntimeError("prompt_input() is not supported in Discord mode. Use Modals or Views instead.")
         elif self.platform == "cli":
-            # If an input file is specified (Web GUI mode), use polling
+            # If an input file is specified (Web GUI mode)
             if hasattr(self, "input_file_path") and self.input_file_path:
                 import json
                 import asyncio
@@ -130,7 +132,30 @@ class PlatformHandler:
 
                 print(f"[CLI] Waiting for Web GUI input: {prompt_text}")
 
-                # Polling loop
+                # --- EVENT-BASED WAIT (no polling) ---
+                if hasattr(self, "_prompt_event") and self._prompt_event is not None:
+                    try:
+                        await asyncio.wait_for(self._prompt_event.wait(), timeout=300.0)
+                        # Response retrieved via callback
+                        if hasattr(self, "_prompt_response_ref") and self._prompt_response_ref:
+                            response = self._prompt_response_ref()
+                            if response is not None:
+                                return response
+                        # Fallback: read from file
+                        if os.path.exists(self.input_file_path):
+                            with open(self.input_file_path, "r") as f:
+                                data = json.load(f)
+                            if "response" in data:
+                                return data.get("response", "")
+                        return ""
+                    except asyncio.TimeoutError:
+                        print(f"[CLI] Prompt timed out: {prompt_text}")
+                        return ""
+                    finally:
+                        # Reset event for next prompt
+                        self._prompt_event.clear()
+
+                # --- LEGACY POLLING FALLBACK ---
                 while True:
                     await asyncio.sleep(0.5)
                     if not os.path.exists(self.input_file_path):
@@ -147,7 +172,6 @@ class PlatformHandler:
                                 json.dump({"status": "idle"}, f)
                             return response
                     except (json.JSONDecodeError, IOError):
-                        # File might be partially written, ignore and retry
                         continue
 
             # Standard CLI fallback

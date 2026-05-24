@@ -234,6 +234,11 @@ class FS: #FS means Fails/successed
             overall_parts_downloaded: int = 0,
             overall_total_parts: int = 0,automatic_removal_or_user_choice:bool=False
     ):
+        # Prevent double-cleanup if already handled
+        cleanup_key = f"{target_path}_{overall_parts_downloaded}_{overall_total_parts}"
+        if getattr(self, '_last_cleanup_key', None) == cleanup_key:
+            return
+        self._last_cleanup_key = cleanup_key
         """Offer the user the option to remove or keep incomplete downloads."""
         if automatic_removal_or_user_choice:
             await self._cleanup_incomplete_download_files(
