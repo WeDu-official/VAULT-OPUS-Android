@@ -9,6 +9,7 @@ import asyncio
 import json
 import hashlib
 import logging
+import contextvars
 import re as regexa
 import tempfile
 import io
@@ -36,6 +37,26 @@ except Exception as e:
     print(f"Encoding fix failed: {e}")
 
 # []=================START OF ACTUAL CODE========================[]
+
+task_stdout = contextvars.ContextVar("task_stdout", default=None)
+task_stderr = contextvars.ContextVar("task_stderr", default=None)
+
+class TaskStdoutProxy:
+    def __init__(self, original, cvar):
+        self.original = original
+        self.cvar = cvar
+    def write(self, data):
+        stream = self.cvar.get()
+        if stream: return stream.write(data)
+        return self.original.write(data)
+    def flush(self):
+        stream = self.cvar.get()
+        if stream: return stream.flush()
+        return self.original.flush()
+    def isatty(self): return getattr(self.original, 'isatty', lambda: False)()
+
+sys.stdout = TaskStdoutProxy(sys.stdout, task_stdout)
+sys.stderr = TaskStdoutProxy(sys.stderr, task_stderr)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("VAULT_OPUS_WebAPI")
@@ -659,6 +680,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 stream = WSStream(websocket, task_id, loop)
                 active_tasks[task_id] = {"input_file_path": input_file_path}
 
+                # Use contextvars to route stdout/stderr to the correct stream for this task
+                t_out = task_stdout.set(stream)
+                t_err = task_stderr.set(stream)
+
                 # Inject the prompt event into PlatformHandler for synchronous waiting
                 # This is set after the event is created below (see the watch_input replacement)
                 prompt_event = asyncio.Event()
@@ -706,12 +731,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 active_tasks[task_id]["prompt_event"] = prompt_event
                 active_tasks[task_id]["prompt_response_ref"] = lambda: prompt_response
 
-                # Redirect stdout/stderr for THIS task only
-                stdout_orig = sys.stdout
-                stderr_orig = sys.stderr
-                sys.stdout = stream
-                sys.stderr = stream
-
                 try:
                     exit_code = 0
                     try:
@@ -724,8 +743,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         stream.write(f"\nError: {str(e)}\n")
                         exit_code = 1
                 finally:
-                    sys.stdout = stdout_orig
-                    sys.stderr = stderr_orig
+                    task_stdout.reset(t_out)
+                    task_stderr.reset(t_err)
                     watcher.cancel()
                     try:
                         await watcher

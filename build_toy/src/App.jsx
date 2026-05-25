@@ -576,6 +576,7 @@ const connectWS = () => {
             const progressMatch = line.match(/Overall.*Progress.*\((\d+)%\)/i) || line.match(/Overall:.*\((\d+)%\)/i);
             setQueue(q => q.map(i => {
               if (i.id !== tid) return i;
+              if (i.status === 'completed' || i.status === 'failed') return i;
               if (line.includes('[OP_SUCCESS]')) return { ...i, status: 'completed', progress: 100 };
               if (line.includes('[OP_FAILURE]')) return { ...i, status: 'failed' };
               if (progressMatch) return { ...i, status: 'running', progress: parseInt(progressMatch[1], 10) };
