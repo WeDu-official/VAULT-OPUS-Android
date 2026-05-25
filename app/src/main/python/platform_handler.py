@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#platform_handler.py (Ridwan) from the VAULT OPUS PROJECT version 1-beta-release* (ANDROID MERGE)
+#platform_handler.py (Ridwan) from the VAULT OPUS PROJECT version 1-R9 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 #[]===================THE ENCODING FIX==========================[]

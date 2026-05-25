@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#config_manager.py (Metatron) from the VAULT OPUS PROJECT version 1-beta-release* (ANDROID MERGE)
+#config_manager.py (Metatron) from the VAULT OPUS PROJECT version 1-R9 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -41,6 +41,10 @@ class ConfigManager:
             "max_retries": 15
         },
         "download": {
+            "max_concurrent": 3,
+            "max_retries": 15
+        },
+        "delete": {
             "max_concurrent": 3,
             "max_retries": 15
         },

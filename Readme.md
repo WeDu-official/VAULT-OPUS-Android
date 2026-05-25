@@ -5,12 +5,12 @@
 
 [![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-green.svg)](https://developer.android.com/about/versions/nougat/android-7.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Status: Beta](https://img.shields.io/badge/Status-Beta-orange.svg)](#)
+[![Status: Stable](https://img.shields.io/badge/status-stable-success.svg)](#)
 </div>
 
 ---
 
-## 📌 Version of VAULT OPUS (ANDROID) in this readme is **1-beta-release-7**
+## 📌 Version of VAULT OPUS (ANDROID) in this readme is **1-R9**
 
 ## WANNA DO PRE INSTALL SETUP? <a href="https://youtu.be/i9rnTi9l2ww">
   <img src="https://img.youtube.com/vi/i9rnTi9l2ww/maxresdefault.jpg" width="500">

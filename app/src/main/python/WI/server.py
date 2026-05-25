@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-beta-release* (ANDROID MERGE)
+#server.py (Sandalphon) from the VAULT OPUS PROJECT version 1-R9 (ANDROID MERGE)
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #---------------------------------------------------------------------
 import os
@@ -49,31 +49,31 @@ if is_android:
         from java import jclass
         Python = jclass('com.chaquo.python.Python')
         context = Python.getPlatform().getApplication()
-        
+
         # Ensure config.json is copied or merged to WRITABLE_DIR
         _initial_config_path = os.path.join(WRITABLE_DIR, "config.json")
         _src_config = os.path.join(VAULT_OPUS_SRC_DIR, "config.json")
-        
+
         logger.info(f"Config sync check: src={_src_config}, dst={_initial_config_path}")
-        
+
         if os.path.exists(_src_config):
             try:
                 import shutil
                 import json
-                
+
                 def force_update_config(src, dst):
                     if not os.path.exists(dst): return True
                     try:
                         with open(src, 'r') as f: s = json.load(f)
                         with open(dst, 'r') as f: d = json.load(f)
-                        
+
                         s_token = s.get("discord", {}).get("token", "")
                         d_token = d.get("discord", {}).get("token", "")
-                        
+
                         # Only update if src has a REAL token that is different from dst
                         if s_token and "PLACEHOLDER" not in s_token and s_token != d_token:
                             return True
-                            
+
                         # Same for channel_id
                         s_cid = str(s.get("discord", {}).get("channel_id", ""))
                         d_cid = str(d.get("discord", {}).get("channel_id", ""))
@@ -89,7 +89,7 @@ if is_android:
                     logger.info(f"SKIP: App storage config.json is already up to date.")
             except Exception as e:
                 logger.error(f"ERROR: Failed to sync config: {e}")
-        
+
         def request_android_permissions():
             try:
                 Build = jclass('android.os.Build')
@@ -159,7 +159,7 @@ async def unified_middleware(request, call_next):
     except Exception as e:
         logger.error(f"[SERVER ERROR] {str(e)}")
         response = JSONResponse(status_code=500, content={"detail": str(e)})
-            
+
     response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
 
@@ -188,7 +188,7 @@ class TaskManager:
             config = get_config(self.config_path)._config
             up_limit = config.get("upload", {}).get("max_concurrent", 3)
             down_limit = config.get("download", {}).get("max_concurrent", 3)
-            
+
             self.semaphores["upload"] = asyncio.Semaphore(up_limit)
             self.semaphores["download"] = asyncio.Semaphore(down_limit)
             self.semaphores["general"] = asyncio.Semaphore(2)
@@ -207,7 +207,7 @@ RECENT_VOLUMES_FILE = os.path.join(WRITABLE_DIR, "recent_volumes.json")
 def get_recent_volumes() -> List[str]:
     if not os.path.exists(RECENT_VOLUMES_FILE): return []
     try:
-        with open(RECENT_VOLUMES_FILE, "r") as f: 
+        with open(RECENT_VOLUMES_FILE, "r") as f:
             items = json.load(f)
             if not isinstance(items, list): return []
             # Deduplicate and validate existence
@@ -277,7 +277,7 @@ async def update_config(new_config: Dict[str, Any]):
     except Exception as e:
         logger.error(f"Failed to save config: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save config: {str(e)}")
-    
+
     task_manager.refresh()
     return {"status": "success", "config": config_obj._config}
 
@@ -319,7 +319,7 @@ async def perform_setup(payload: Dict[str, Any]):
     token = payload.get("token")
     channel_id = payload.get("channel_id")
     db_name = payload.get("db_name")
-    
+
     if not bool(config._config.get("discord", {}).get("token", "").replace("PLACEHOLDER_TOKEN","")):
         if not token: raise HTTPException(status_code=400, detail="Discord Token is required")
         config._config["discord"]["token"] = token
@@ -327,13 +327,13 @@ async def perform_setup(payload: Dict[str, Any]):
         if not channel_id: raise HTTPException(status_code=400, detail="Discord Channel ID is required")
         config._config["discord"]["channel_id"] = channel_id
     config._save_config()
-    
+
     first_db = None
     db_dir = os.path.join(WRITABLE_DIR, "DATABASES")
     if os.path.exists(db_dir):
         for f in os.listdir(db_dir):
             if f.endswith(".db"): first_db = f; break
-    
+
     if not first_db:
         if not db_name: raise HTTPException(status_code=400, detail="Volume Name is required")
         try:
@@ -369,13 +369,13 @@ async def create_db(db_name: str = Body(..., embed=True)):
         await db_manager._db_insert_sync(db_path, dummy)
         await db_manager._db_delete_sync(db_path, [{"base_filename": ""}])
         volume_manager.create_volume_config(db_name)
-        
+
         # Auto-add to recent
         recent = get_recent_volumes()
         if db_name not in recent:
             recent.insert(0, db_name)
             save_recent_volumes(recent)
-            
+
         return {"status": "success", "db_name": db_name}
     except Exception as e:
         logger.error(f"Error creating DB: {e}")
@@ -399,28 +399,28 @@ async def rename_db(old_name: str = Body(..., embed=True), new_name: str = Body(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dbs/share")
-async def share_db(db_name: str = Body(..., embed=True)):
+async def share_db(db_name: str = Body(..., embed=True), password: Optional[str] = Body(None, embed=True)):
     if not db_name.endswith('.db'): db_name += '.db'
     db_path = os.path.join(DB_DIR, db_name)
     try:
-        package_path = volume_manager.make_package(db_path)
+        package_path = volume_manager.make_package(db_path, password)
         return {"status": "success", "package_path": str(package_path), "filename": os.path.basename(package_path)}
     except Exception as e:
         logger.error(f"Error sharing volume: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dbs/import")
-async def import_db(vov_path: str = Body(..., embed=True)):
+async def import_db(vov_path: str = Body(..., embed=True), password: Optional[str] = Body(None, embed=True)):
     try:
-        db_path, cfg_path = volume_manager.open_package(vov_path)
+        db_path, cfg_path = volume_manager.open_package(vov_path, password)
         db_name = os.path.basename(db_path)
-        
+
         # Auto-add to recent
         recent = get_recent_volumes()
         if db_name not in recent:
             recent.insert(0, db_name)
             save_recent_volumes(recent)
-            
+
         return {"status": "success", "db_name": db_name}
     except Exception as e:
         logger.error(f"Error importing volume: {e}")
@@ -435,7 +435,16 @@ async def list_sharables():
             full_path = os.path.join(volume_manager.SHARABLES_DIR, item)
             is_dir = os.path.isdir(full_path)
             is_vov = item.lower().endswith('.vov')
-            if is_dir or is_vov: items.append({"name": item, "path": full_path, "is_dir": is_dir, "is_vov": is_vov})
+            # Detect encrypted: ends with .e.vov
+            is_encrypted = item.lower().endswith('.e.vov')
+            if is_dir or is_vov:
+                items.append({
+                    "name": item,
+                    "path": full_path,
+                    "is_dir": is_dir,
+                    "is_vov": is_vov,
+                    "is_encrypted": is_encrypted
+                })
         items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
         return {"items": items, "path": str(volume_manager.SHARABLES_DIR)}
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
@@ -604,9 +613,9 @@ class WSStream(io.IOBase):
 
 @app.websocket("/ws/cli")
 async def websocket_endpoint(websocket: WebSocket):
-    try: 
+    try:
         await manager.connect(websocket)
-    except Exception as e: 
+    except Exception as e:
         logger.error(f"--- [WS CONNECTION ERROR] {str(e)} ---")
         return
 
@@ -620,8 +629,8 @@ async def websocket_endpoint(websocket: WebSocket):
             # Create input file for commands that need user interaction
             if cmd_type in ("upload", "update", "download", "delete"):
                 input_fd, input_file_path = tempfile.mkstemp(
-                    suffix=".json", 
-                    prefix=f"vault_input_{task_id}_", 
+                    suffix=".json",
+                    prefix=f"vault_input_{task_id}_",
                     dir=WRITABLE_DIR
                 )
                 os.close(input_fd)
@@ -634,7 +643,7 @@ async def websocket_endpoint(websocket: WebSocket):
             semaphore = task_manager.get_semaphore(cmd_type)
 
             await manager.send_message(
-                json.dumps({"type": "status", "task_id": task_id, "data": "Queued...\n"}), 
+                json.dumps({"type": "status", "task_id": task_id, "data": "Queued...\n"}),
                 websocket
             )
 
@@ -724,7 +733,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         pass
 
             await manager.send_message(
-                json.dumps({"type": "exit", "task_id": task_id, "code": exit_code}), 
+                json.dumps({"type": "exit", "task_id": task_id, "code": exit_code}),
                 websocket
             )
 
@@ -774,12 +783,12 @@ def start_server():
     logger.info("Starting VAULT OPUS Uvicorn Server on 0.0.0.0:8000")
     try:
         config = uvicorn.Config(
-            app, 
-            host="0.0.0.0", 
-            port=8000, 
-            log_level="info", 
-            access_log=True, 
-            timeout_keep_alive=65, 
+            app,
+            host="0.0.0.0",
+            port=8000,
+            log_level="info",
+            access_log=True,
+            timeout_keep_alive=65,
             workers=1
         )
         config.install_signal_handlers = False

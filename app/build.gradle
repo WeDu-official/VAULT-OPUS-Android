@@ -9,7 +9,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3
-        versionName "1-R8"
+        versionName "1-R9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -36,6 +36,7 @@ android {
                 install "typing-extensions==4.15.0"
                 install "anyio==4.13.0"
                 install "starlette==0.38.6"
+                install "pyzipper==0.4.0"
             }
         }
     }

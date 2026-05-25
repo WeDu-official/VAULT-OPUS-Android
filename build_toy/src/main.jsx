@@ -1,4 +1,4 @@
-// main.jsx (FOR MOBILE) from the VAULT OPUS PROJECT version 1-beta-release*
+// main.jsx (FOR MOBILE) from the VAULT OPUS PROJECT version 1-R9
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

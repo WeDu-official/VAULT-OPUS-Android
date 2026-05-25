@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#delete.py (Azrael) from the VAULT OPUS PROJECT version 1-beta-release*
+#delete.py (Azrael) from the VAULT OPUS PROJECT version 1-R9
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -14,7 +14,7 @@ import os
 import traceback
 from typing import Dict, Optional, List
 import discord
-
+from config_manager import get_config
 from database import DatabaseManager
 from versioning import VersioningManager
 from deletetools.delete_database import DeleteDatabase
@@ -72,7 +72,8 @@ class DeleteContext:
 
         # State tracking (like user_downloading)
         self.user_deleting: Dict[int, str] = {}
-        self.delete_semaphore = asyncio.Semaphore(3)  # Same as upload/download
+        max_concurrent = get_config().get("delete", "max_concurrent", default=3)
+        self.delete_semaphore = asyncio.Semaphore(max_concurrent)
 
     async def deletea(
             self,

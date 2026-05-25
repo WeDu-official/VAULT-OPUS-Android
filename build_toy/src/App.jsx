@@ -1,4 +1,4 @@
-// ==================== ANDROID-FRIENDLY FULL-FEATURED App.jsx ====================
+// ==================== ANDROID-FRIENDLY FULL-FEATURED App.jsx 1-R9====================
 // Intercept all relative fetch calls to point to the backend at 127.0.0.1:8000
 const originalFetch = window.fetch;
 window.fetch = async (input, init) => {
@@ -23,22 +23,23 @@ const Ico = {
   menu: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-7 h-7"><path d="M4 6h16M4 12h16M4 18h16" /></svg>,
   settings: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
   cube: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>,
-  clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   terminal: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-  rename: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
-  move: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>,
-  check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M5 13l4 4L19 7" /></svg>,
-  info: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  rename: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+  move: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>,
+  check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M5 13l4 4L19 7" /></svg>,
+  info: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   newFolder: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V9a2 2 0 00-2-2h-2.586a1 1 0 01-.707-.293l-1.414-1.414a1 1 0 00-.707-.293H7a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
   selectAll: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>,
-  share: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>,
+  share: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>,
   version: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg>,
   alert: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  copy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
+  copy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
   folderOpen: <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-[#3bb5ff]"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>,
   home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
   import: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
-  bomb: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  bomb: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  externalLink: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6v6m-11 5L21 3" /></svg>,
 };
 
 // ---------- Helper Components ----------
@@ -434,6 +435,9 @@ export default function App() {
   const [externalVolumes, setExternalVolumes] = useState(() => { const saved = localStorage.getItem('mob_externalVolumes'); return saved ? JSON.parse(saved) : []; });
   const [recentVolumes, setRecentVolumes] = useState(() => { const saved = localStorage.getItem('mob_recentVolumes'); return saved ? JSON.parse(saved) : []; });
   const [toast, setToast] = useState(null);
+  const [passwordModal, setPasswordModal] = useState({ open: false, path: '', password: '', error: '' });
+  const [showSharePasswordModal, setShowSharePasswordModal] = useState(false);
+  const [dbToShare, setDbToShare] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const [volumeError, setVolumeError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -446,7 +450,77 @@ export default function App() {
   const showToast = (msg, type = 'info') => setToast({ message: msg, type, key: Date.now() });
 
   // Android‑friendly WebSocket with fallback to 127.0.0.1:8000
-  const connectWS = () => {
+
+  const doImport = async (path, password) => {
+    if (passwordModal.error) {
+      setPasswordModal(prev => ({ ...prev, error: '' }));
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    try {
+      const body = { vov_path: path };
+      if (password) body.password = password;
+      const res = await fetch('/api/dbs/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Import failed');
+      }
+      showToast('Imported successfully', 'success');
+      setPasswordModal({ open: false, path: '', password: '', error: '' });
+      setModal(null);
+      fetchDbs();
+    } catch (error) {
+      if (password !== null && error.message && (error.message.toLowerCase().includes('password') || error.message.toLowerCase().includes('incorrect') || error.message.toLowerCase().includes('mac'))) {
+        setPasswordModal(prev => ({ ...prev, error: 'Incorrect password. Try again.', password: '' }));
+      } else {
+        setPasswordModal({ open: false, path: '', password: '', error: '' });
+        showToast('Import failed: ' + error.message, 'error');
+      }
+    }
+  };
+  
+
+  const executeShare = async (password = null) => {
+    setShowSharePasswordModal(false);
+    try {
+      const body = { db_name: dbToShare };
+      if (password) body.password = password;
+      const res = await fetch('/api/dbs/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to package volume');
+      }
+      const data = await res.json();
+      const lockIcon = password ? '🔒 ' : '';
+      setModal({
+        title: password ? '🔒 Volume Packaged' : 'Volume Packaged',
+        content: (
+          <div className="space-y-4">
+            <div className="p-4 bg-green-900/20 border border-green-500/30 rounded-xl">
+              <p className="text-sm text-green-400 font-bold">{lockIcon}📦 Packaged Successfully!</p>
+              <p className="text-xs text-gray-300 mt-2">
+                Volume <span className="text-white font-mono">{dbToShare}</span> packaged successfully!<br />
+                Package: <span className="text-white font-mono">{data.filename}</span><br />
+                Stored in <span className="text-white font-mono">src/SHARABLES</span> folder.
+                {password && <span className="block mt-1 text-amber-300">This package is password-protected.</span>}
+              </p>
+            </div>
+            <button onClick={() => { fetch('/api/dbs/open_sharables', { method: 'POST' }); setModal(null); }} className="w-full py-3 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold flex items-center justify-center gap-2 btn-touch">{Ico.share} Open src/SHARABLES Folder</button>
+            <button onClick={() => setModal(null)} className="w-full py-3 bg-[#0f1f3a] text-gray-300 rounded-xl text-sm btn-touch">Close</button>
+          </div>
+        )
+      });
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setDbToShare('');
+    }
+  };
+
+const connectWS = () => {
     if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     let host = window.location.host;
@@ -1491,35 +1565,125 @@ export default function App() {
 
   const SharablesModalContent = () => {
     const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    useEffect(() => {
-      fetch('/api/dbs/list_sharables')
-        .then(r => r.json())
-        .then(data => { setItems(data.items || []); setLoading(false); })
-        .catch(() => setLoading(false));
-    }, []);
-    const importVov = async (path) => {
+    const [loading, setLoading] = useState(false);
+    const [currentPath, setCurrentPath] = useState('');
+    const [viewMode, setViewMode] = useState('sharables');
+
+    const fetchSharables = async () => {
+      setLoading(true);
       try {
-        await fetch('/api/dbs/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vov_path: path }) });
-        showToast('Imported', 'success');
-        setModal(null);
-        fetchDbs();
-      } catch (e) { showToast(e.message, 'error'); }
+        const r = await fetch('/api/dbs/list_sharables');
+        const data = await r.json();
+        setItems(data.items || []);
+        setCurrentPath(data.path || 'src/SHARABLES');
+      } catch (e) { showToast('Failed to load sharables', 'error'); }
+      setLoading(false);
     };
+
+    const fetchDirectory = async (path = '') => {
+      setLoading(true);
+      try {
+        const r = await fetch(`/api/fs/browse?path=${encodeURIComponent(path)}`);
+        const data = await r.json();
+        setCurrentPath(data.current_path);
+        setItems(data.items.map(item => ({ ...item, is_vov: item.name.toLowerCase().endsWith('.vov') })));
+      } catch (e) { showToast('Failed to browse directory', 'error'); }
+      setLoading(false);
+    };
+
+    const goHome = async () => {
+      try { const r = await fetch('/api/fs/home'); const d = await r.json(); fetchDirectory(d.path); } catch (e) { fetchDirectory(''); }
+    };
+
+    useEffect(() => {
+      if (viewMode === 'sharables') fetchSharables();
+      else fetchDirectory('');
+    }, [viewMode]);
+
+    const handleImport = (path, isEncrypted) => {
+      if (isEncrypted) {
+        setPasswordModal({ open: true, path, password: '', error: '' });
+      } else {
+        doImport(path, null);
+      }
+    };
+
+    const handleItemClick = (item) => {
+      if (item.is_dir) fetchDirectory(item.path);
+      else if (item.is_vov) handleImport(item.path, item.is_encrypted);
+    };
+
+    const tabs = [
+      { id: 'browse', label: 'System Browser', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg> },
+      { id: 'sharables', label: 'src/SHARABLES', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 flex-shrink-0"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /></svg> },
+    ];
+
     return (
-      <div className="space-y-3">
-        {loading ? <div className="text-center py-8 text-gray-500">Loading...</div> : items.length === 0 ? <div className="text-center py-8 text-gray-500">No packages found</div> : items.map(item => (
-          <div key={item.path} className="flex items-center justify-between p-3 bg-[#0f1f3a] rounded-xl border border-[#1a3a5c]">
-            <div className="flex items-center gap-3 overflow-hidden"><span className="text-[#3bb5ff]">{item.is_dir ? Ico.folder : Ico.cube}</span><span className="text-sm text-gray-200 truncate">{item.name}</span></div>
-            {item.is_vov && <button onClick={() => importVov(item.path)} className="px-3 py-1 bg-[#3bb5ff]/20 text-[#3bb5ff] text-xs font-bold rounded-lg">Import</button>}
+      <div className="-mx-4 -mt-4">
+        <div className="flex gap-1 p-2 bg-[#060d1a] border-b border-[#1a3a5c]">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setViewMode(t.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-1 rounded-lg text-[9px] font-bold uppercase tracking-wide transition-all btn-touch ${viewMode === t.id ? 'bg-[#3bb5ff] text-[#0a1628]' : 'text-gray-400 hover:text-white hover:bg-[#0f1f3a]'}`}
+            >
+              {t.icon}
+              <span className="truncate">{t.label}</span>
+            </button>
+          ))}
+        </div>
+        {viewMode !== 'sharables' && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-[#060d1a]/60 border-b border-[#1a3a5c]">
+            <button onClick={goHome} className="p-1 btn-touch text-[#3bb5ff] hover:bg-[#1a3a5c] rounded-lg flex-shrink-0">{Ico.home}</button>
+            <span className="text-[10px] text-gray-500 font-mono truncate flex-1 opacity-70">{currentPath || '/'}</span>
           </div>
-        ))}
-        <button onClick={() => fetch('/api/dbs/open_sharables', { method: 'POST' })} className="w-full py-3 bg-[#0f1f3a] text-gray-300 rounded-xl text-sm btn-touch flex items-center justify-center gap-2">{Ico.share} Open Folder on Host</button>
+        )}
+        <div className="overflow-y-auto px-3 pt-2 pb-1 space-y-1" style={{ maxHeight: '50vh' }}>
+          {loading ? (
+            <div className="text-center py-12 text-gray-500 text-sm">Loading...</div>
+          ) : items.filter(item => item.is_dir || item.is_vov).length === 0 ? (
+            <div className="text-center py-12 text-gray-500 italic text-sm">No suitable files found.</div>
+          ) : (
+            items.filter(item => item.is_dir || item.is_vov).map(item => (
+              <div
+                key={item.path}
+                onClick={() => handleItemClick(item)}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer btn-touch ${item.is_vov ? 'hover:bg-[#3bb5ff]/10 border-transparent hover:border-[#3bb5ff]/20' : 'hover:bg-[#0f1f3a] border-transparent'}`}
+              >
+                <span className="flex-shrink-0">
+                  {item.is_dir ? <span className="text-[#3bb5ff]/60">{Ico.folder}</span> : (
+                    <div className="relative">
+                      <span className="text-[#3bb5ff]">{Ico.cube}</span>
+                      {item.is_encrypted && (
+                        <span className="absolute -top-1 -right-1 text-[10px]">🔒</span>
+                      )}
+                    </div>
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-sm truncate ${item.is_vov ? 'text-gray-200' : 'text-gray-400'}`}>{item.name}</div>
+                  <div className="text-[10px] text-gray-500 font-mono opacity-50">
+                    {item.is_dir ? 'Directory' : item.is_vov ? 'Vault Opus Volume' : 'File'}
+                  </div>
+                </div>
+                {item.is_vov && (
+                  <span className="text-[9px] font-bold text-[#3bb5ff]/60 uppercase tracking-widest px-2 py-1 rounded bg-[#3bb5ff]/5 border border-[#3bb5ff]/10 flex-shrink-0">
+                    {item.is_encrypted ? '🔒 Import' : 'Import'}
+                  </span>
+                )}
+                {item.is_dir && <span className="text-gray-600 flex-shrink-0">{Ico.back}</span>}
+              </div>
+            ))
+          )}
+        </div>
+        <div className="px-3 py-2 border-t border-[#1a3a5c]">
+          <p className="text-[10px] text-gray-600 italic text-center">Tap a .vov package to import it into your workspace.</p>
+        </div>
       </div>
     );
   };
 
-  const RenameVolumeModalContent = ({ db }) => {
+const RenameVolumeModalContent = ({ db }) => {
     const [newName, setNewName] = useState(db.replace(/\.db$/i, ''));
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
@@ -1595,6 +1759,87 @@ export default function App() {
   );
 
   // -------------------- RENDER --------------------
+  const CreateVolumeModalContent = () => {
+    const [name, setName] = useState('');
+    const [error, setError] = useState('');
+    const [creating, setCreating] = useState(false);
+    const handleCreate = async () => {
+      const trimmed = name.trim();
+      if (!trimmed) { setError('Volume name cannot be empty'); return; }
+      const finalName = trimmed.endsWith('.db') ? trimmed : `${trimmed}.db`;
+      setCreating(true); setError('');
+      try {
+        const res = await fetch('/api/dbs/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ db_name: finalName })
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed to create volume'); }
+        showToast(`Volume ${finalName} created`, 'success');
+        setShowCreateVolume(false);
+        setName('');
+        fetchDbs();
+      } catch (e) { setError(e.message); }
+      finally { setCreating(false); }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="text-[10px] text-gray-500 uppercase mb-1 block">Volume Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => { setName(e.target.value); setError(''); }}
+            placeholder="e.g. myvault"
+            className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm text-gray-200 outline-none focus:border-[#3bb5ff] transition-colors"
+            autoFocus
+          />
+          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+          <p className="text-[10px] text-gray-600 mt-1">.db extension added automatically if omitted</p>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={() => { setShowCreateVolume(false); setName(''); setError(''); }}
+            className="flex-1 py-3 bg-[#0f1f3a] text-gray-300 rounded-xl border border-[#1a3a5c] btn-touch text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={creating || !name.trim()}
+            className="flex-1 py-3 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold btn-touch text-sm disabled:opacity-40"
+          >
+            {creating ? 'Creating...' : 'Create Volume'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const VolumeOptionsMenu = ({ db }) => (
+    <div className="space-y-2">
+      <button onClick={() => { setModal(null); setSelectedDb(db); setTab('explorer'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.folderOpen} Open</button>
+      <button onClick={() => { setModal({ title: 'Rename Volume', content: <RenameVolumeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.rename} Rename</button>
+      <button onClick={() => { setModal(null); setDbToShare(db); setShowSharePasswordModal(true); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.share} Package</button>
+      <button onClick={() => { setModal(null); setModal({ title: '☢️ NUKE', content: <NukeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/10 border border-red-900/20 rounded-xl text-sm text-red-500 font-bold btn-touch">☢️ NUKE</button>
+      <button onClick={() => { setModal({ title: 'Confirm Deletion', content: <DeleteConfirmModal db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-900/30 rounded-xl text-sm text-red-400 btn-touch">{Ico.trash} Delete Permanently</button>
+    </div>
+  );
+
+  const DeleteConfirmModal = ({ db }) => (
+    <div className="space-y-4">
+      <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
+        <p className="text-sm text-red-400 font-bold">⚠️ PERMANENT DELETE</p>
+        <p className="text-xs text-gray-300 mt-1">This will permanently remove <span className="text-white font-mono">{db}</span> from disk. This CANNOT be undone.</p>
+      </div>
+      <div className="flex gap-3">
+        <button onClick={() => setModal(null)} className="flex-1 py-3 bg-[#0f1f3a] text-gray-300 rounded-xl border border-[#1a3a5c] btn-touch">Cancel</button>
+        <button onClick={async () => { try { await fetch('/api/dbs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); fetchDbs(); if (selectedDb === db) setSelectedDb(''); showToast('Deleted', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold btn-touch">Delete</button>
+      </div>
+    </div>
+  );
+
   const renderExplorer = () => (
     <div className="flex flex-col h-full bg-[#060d1a]">
       <div className="flex items-center gap-1 px-3 py-2 bg-[#0a1628] border-b border-[#1a3a5c] overflow-x-auto">
@@ -1699,7 +1944,7 @@ export default function App() {
         <h2 className="text-lg font-bold text-white">Volumes</h2>
         <div className="flex gap-2">
           <button onClick={async () => { await fetchDbs(); showToast('Volume list refreshed', 'success'); }} className="p-2 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch" title="Refresh Volume List">{Ico.version}</button>
-          <button onClick={() => setModal({ title: 'Sharables', content: <SharablesModalContent /> })} className="p-2 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-300 rounded-xl btn-touch" title="Open Sharables">{Ico.share}</button>
+          <button onClick={() => setModal({ title: 'Sharables', content: <SharablesModalContent /> })} className="p-2 bg-[#0f1f3a] border border-[#1a3a5c] text-[#3bb5ff] rounded-xl btn-touch" title="Open Sharables">{Ico.externalLink}</button>
           <button onClick={() => setShowCreateVolume(true)} className="p-2 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl btn-touch" title="Create Volume">{Ico.plus}</button>
         </div>
       </div>
@@ -1707,18 +1952,57 @@ export default function App() {
         {recentVolumes.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-3"><span className="text-[#3bb5ff]/50">{Ico.clock}</span><h3 className="text-[10px] uppercase font-bold text-[#3bb5ff]/50">Recent</h3></div>
-            <div className="space-y-2">{recentVolumes.map(db => <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}><div onClick={() => { if (selectedDb === db) fetchFiles(currentPath); else setSelectedDb(db); setTab('explorer'); }} className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"><span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span><div className="text-sm font-bold truncate text-white">{db.split(/[\/\\]/).pop().replace('.db', '')}</div></div><button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateRecentVolumes(prev => prev.filter(d => d !== db)); if (selectedDb === db) setSelectedDb(''); showToast('Removed', 'success'); }} className="p-3 -m-1.5 text-gray-600 hover:text-red-400 rounded-lg transition-colors flex-shrink-0">{Ico.close}</button></div>)}</div>
+            <div className="space-y-2">{recentVolumes.map(db => (
+              <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}>
+                <div
+                  onClick={() => { if (selectedDb === db) fetchFiles(currentPath); else setSelectedDb(db); setTab('explorer'); }}
+                  className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"
+                >
+                  <span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span>
+                  <div className="text-sm font-bold truncate text-white">{db.split(/[\/\\]/).pop().replace('.db', '')}</div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateRecentVolumes(prev => prev.filter(d => d !== db));
+                    if (selectedDb === db) setSelectedDb('');
+                    showToast('Removed', 'success');
+                  }}
+                  className="p-3 -m-1.5 text-gray-600 hover:text-red-400 rounded-lg transition-colors flex-shrink-0"
+                >
+                  {Ico.close}
+                </button>
+              </div>
+            ))}</div>
           </section>
         )}
         <section>
-          <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className="text-[#3bb5ff]/50">{Ico.cube}</span><h3 className="text-[10px] uppercase font-bold text-[#3bb5ff]/50">Available</h3></div></div>
-          <div className="space-y-2">{dbs.map(db => <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}><div onClick={() => { if (selectedDb === db) fetchFiles(currentPath); else setSelectedDb(db); setTab('explorer'); }} className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"><span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span><span className="text-sm font-bold text-white truncate">{db.split(/[\/\\]/).pop().replace('.db', '')}</span></div><button onClick={(e) => { e.stopPropagation(); setModal({ title: 'Volume Options', content: <div className="space-y-2"><button onClick={() => { setModal(null); setSelectedDb(db); setTab('explorer'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.folderOpen} Open</button><button onClick={() => { setModal({ title: 'Rename Volume', content: <RenameVolumeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.rename} Rename</button><button onClick={async () => { try { await fetch('/api/dbs/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); showToast('Packaged', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.share} Package</button><button onClick={() => { setModal(null); setModal({ title: '☢️ NUKE', content: <NukeModalContent db={db} /> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/10 border border-red-900/20 rounded-xl text-sm text-red-500 font-bold btn-touch">☢️ NUKE</button><button onClick={() => { updateRecentVolumes(prev => prev.filter(p => p !== db)); if (selectedDb === db) setSelectedDb(''); setModal(null); showToast('Removed', 'success'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f1f3a] rounded-xl text-sm text-gray-300 btn-touch">{Ico.close} Remove from List</button><button onClick={() => { setModal({ title: 'Confirm Deletion', content: <div className="space-y-4"><div className="p-4 bg-red-900/20 border border-red-500/30 rounded-xl"><p className="text-sm text-red-400 font-bold">⚠️ PERMANENT DELETE</p><p className="text-xs text-gray-300 mt-1">This will permanently remove <span className="text-white font-mono">{db}</span> from disk. This CANNOT be undone.</p></div><div className="flex gap-3"><button onClick={() => setModal(null)} className="flex-1 py-3 bg-[#0f1f3a] text-gray-300 rounded-xl border border-[#1a3a5c] btn-touch">Cancel</button><button onClick={async () => { try { await fetch('/api/dbs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: db }) }); fetchDbs(); if (selectedDb === db) setSelectedDb(''); showToast('Deleted', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold btn-touch">Delete</button></div></div> }); }} className="w-full flex items-center gap-3 px-4 py-3 bg-red-900/20 border border-red-900/30 rounded-xl text-sm text-red-400 btn-touch">{Ico.trash} Delete Permanently</button></div> }); }} className="p-2 text-gray-500 hover:text-white btn-touch">{Ico.menu}</button></div>)}</div>
+          <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><span className="text-[#3bb5ff]/50">{Ico.cube}</span><h3 className="text-[10px] uppercase font-bold text-[#3bb5ff]/50">Available</h3></div><button onClick={() => setModal({ title: 'Add External Volume', content: <RemoteFolderPicker showFiles onSelect={p => { if (p.endsWith('.db')) { setExternalVolumes(prev => { const u = [...new Set([...prev, p])]; localStorage.setItem('mob_externalVolumes', JSON.stringify(u)); return u; }); fetchDbs(); setModal(null); showToast('Volume added', 'success'); } else showToast('Must be .db', 'error'); }} onCancel={() => setModal(null)} /> })} className="text-[10px] text-[#3bb5ff] font-bold btn-touch uppercase">+ External</button></div>
+          <div className="space-y-2">{dbs.map(db => (
+            <div key={db} className={`flex items-center justify-between px-4 py-3 rounded-xl border btn-touch ${selectedDb === db ? 'bg-[#3bb5ff]/15 border-[#3bb5ff]' : 'bg-[#0f1f3a]/40 border-[#1a3a5c]'}`}>
+              <div
+                onClick={() => { if (selectedDb === db) fetchFiles(currentPath); else setSelectedDb(db); setTab('explorer'); }}
+                className="flex-1 flex items-center gap-3 min-w-0 mr-2 py-1"
+              >
+                <span className={selectedDb === db ? 'text-[#3bb5ff]' : 'text-gray-500'}>{Ico.cube}</span>
+                <span className="text-sm font-bold text-white truncate">{db.split(/[\/\\]/).pop().replace('.db', '')}</span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModal({ title: 'Volume Options', content: <VolumeOptionsMenu db={db} /> });
+                }}
+                className="p-3 -m-1.5 text-gray-500 hover:text-white btn-touch"
+              >
+                {Ico.menu}
+              </button>
+            </div>
+          ))}</div>
         </section>
         <button onClick={() => setModal({ title: 'Import .vov Package', content: <div className="space-y-3"><RemoteFolderPicker showFiles onSelect={async p => { if (p.endsWith('.vov')) { try { await fetch('/api/dbs/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vov_path: p }) }); fetchDbs(); showToast('Imported', 'success'); setModal(null); } catch (e) { showToast(e.message, 'error'); } } else showToast('Must select .vov', 'error'); }} onCancel={() => setModal(null)} /></div> })} className="w-full py-4 bg-[#0f1f3a] border border-[#1a3a5c] rounded-2xl text-xs text-gray-300 font-bold uppercase btn-touch flex items-center justify-center gap-2">{Ico.import} Import VOV Package</button>
       </div>
     </div>
   );
-
   const renderQueue = () => (
     <div className="flex flex-col h-full">
       <div className="px-4 py-3 bg-[#0a1628] border-b border-[#1a3a5c] flex items-center justify-between"><h2 className="text-lg font-bold text-white">Queue</h2><button onClick={() => setQueue([])} className="text-xs text-gray-400 btn-touch">Clear All</button></div>
@@ -1771,46 +2055,40 @@ export default function App() {
 
       {bottomSheet && <Sheet open onClose={() => setBottomSheet(null)} title={bottomSheet.title}>{bottomSheet.content}</Sheet>}
       {modal && <Modal open onClose={() => setModal(null)} title={modal.title} wide={modal.wide}>{modal.content}</Modal>}
-      {showCreateVolume && <Modal open onClose={() => setShowCreateVolume(false)} title="Create Volume"><div className="space-y-4"><input type="text" value={newDbName} onChange={e => setNewDbName(e.target.value)} placeholder="Volume name" autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" /><button onClick={async () => { try { const r = await fetch('/api/dbs/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ db_name: newDbName }) }); const res = await r.json(); if (!r.ok) throw new Error(res.detail || 'Creation failed'); fetchDbs(); setShowCreateVolume(false); setSelectedDb(res.db_name); setTab('explorer'); } catch (e) { showToast(e.message, 'error'); } }} disabled={!newDbName.trim()} className="w-full py-4 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold">Create</button></div></Modal>}
-      {promptQueue.length > 0 && <Modal open onClose={() => setPromptQueue(prev => prev.slice(1))} title="Input Required"><div className="space-y-4"><p className="text-sm text-gray-400">{promptQueue[0].text}</p><input type={promptQueue[0].isPassword ? 'password' : 'text'} autoFocus className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm" onKeyDown={e => { if (e.key === 'Enter') { if (ws) ws.send(JSON.stringify({ action: 'input', data: e.target.value, task_id: promptQueue[0].taskId })); setPromptQueue(prev => prev.slice(1)); } }} /><button onClick={() => { if (ws) ws.send(JSON.stringify({ action: 'input', data: '', task_id: promptQueue[0].taskId })); setPromptQueue(prev => prev.slice(1)); }} className="w-full py-3 bg-[#3bb5ff] text-[#060d1a] rounded-xl font-bold">Submit</button></div></Modal>}
-      {showSetupModal && (
-        <Modal open onClose={() => { }} title="First Time Setup" wide>
+      {showCreateVolume && (
+        <Modal open onClose={() => setShowCreateVolume(false)} title="Create New Volume">
+          <CreateVolumeModalContent />
+        </Modal>
+      )}
+      {passwordModal.open && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#0a1628] border border-[#1a3a5c] rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-red-400">🔒</span>
+              <h3 className="text-lg font-bold text-white">Password Protected Package</h3>
+            </div>
+            {passwordModal.error && <div className="mb-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg text-red-400 text-sm">{passwordModal.error}</div>}
+            <input type="password" value={passwordModal.password} onChange={(e) => setPasswordModal(prev => ({ ...prev, password: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter' && passwordModal.password) doImport(passwordModal.path, passwordModal.password); }} placeholder="Enter package password..." className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-4 py-3 text-sm text-white outline-none mb-4" autoFocus />
+            <div className="flex gap-3">
+              <button onClick={() => setPasswordModal({ open: false, path: '', password: '', error: '' })} className="flex-1 py-3 bg-[#0f1f3a] text-gray-300 rounded-xl font-bold">Cancel</button>
+              <button onClick={() => doImport(passwordModal.path, passwordModal.password)} disabled={!passwordModal.password} className="flex-1 py-3 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold disabled:opacity-40">Import</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showSharePasswordModal && (
+        <Modal open onClose={() => { setShowSharePasswordModal(false); setDbToShare(''); }} title="Share Volume">
           <div className="space-y-4">
-            <p className="text-sm text-gray-300">Welcome to Vault Opus! Please configure your backend connection to continue.</p>
-            {!setupStatus.has_valid_token && (
-              <div>
-                <label className="text-xs text-gray-500 uppercase">Discord Bot Token</label>
-                <input type="password" value={setupData.token} onChange={e => setSetupData({ ...setupData, token: e.target.value })} placeholder="Token" className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm mt-1" />
-              </div>
-            )}
-            {!setupStatus.has_valid_channel && (
-              <div>
-                <label className="text-xs text-gray-500 uppercase">Discord Channel ID</label>
-                <input type="text" value={setupData.channel_id} onChange={e => setSetupData({ ...setupData, channel_id: e.target.value })} placeholder="Channel ID" className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm mt-1" />
-              </div>
-            )}
-            {!setupStatus.has_valid_volume && (
-              <div>
-                <label className="text-xs text-gray-500 uppercase">First Volume Name</label>
-                <input type="text" value={setupData.db_name} onChange={e => setSetupData({ ...setupData, db_name: e.target.value })} placeholder="e.g. main" className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm mt-1" />
-              </div>
-            )}
-            <button onClick={async () => {
-              if (!setupStatus.has_valid_token && !setupData.token) { showToast('Please enter a Discord Bot Token', 'error'); return; }
-              if (!setupStatus.has_valid_channel && !setupData.channel_id) { showToast('Please enter a Discord Channel ID', 'error'); return; }
-              if (!setupStatus.has_valid_volume && !setupData.db_name) { showToast('Please enter a Volume Name', 'error'); return; }
-              try {
-                const r = await fetch('/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(setupData) });
-                if (!r.ok) throw new Error((await r.json()).detail || 'Setup failed');
-                const res = await r.json();
-                setShowSetupModal(false);
-                fetchDbs();
-                fetchConfig();
-                setSelectedDb(res.db_name);
-                setTab('explorer');
-                showToast('Setup complete!', 'success');
-              } catch (e) { showToast(e.message, 'error'); }
-            }} className="w-full py-4 bg-gradient-to-r from-[#006fbe] to-[#3bb5ff] text-white rounded-xl font-bold mt-2">Finish Setup</button>
+            <p className="text-sm text-gray-300">Choose how to package <b>{dbToShare}</b>:</p>
+            <button onClick={() => executeShare(null)} className="w-full py-3 bg-[#0f1f3a] border border-[#1a3a5c] text-gray-200 rounded-xl font-bold">📦 Passwordless Package</button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#1a3a5c]"></div></div>
+              <div className="relative flex justify-center text-xs"><span className="px-2 bg-[#0a1628] text-gray-500">or</span></div>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); const pwd = e.target.password.value; if (pwd) executeShare(pwd); }} className="space-y-3">
+              <input name="password" type="password" placeholder="Enter password..." className="w-full bg-[#060d1a] border border-[#1a3a5c] rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-[#3bb5ff]" autoFocus />
+              <button type="submit" className="w-full py-3 bg-gradient-to-r from-red-600 to-red-400 text-white rounded-xl font-bold">🔒 Password-Protected Package</button>
+            </form>
           </div>
         </Modal>
       )}

@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------
-#discord_cleanup.py (for deletetools) (SHEVA) from the VAULT OPUS PROJECT version 1-beta-release*
+#discord_cleanup.py (for deletetools) (SHEVA) from the VAULT OPUS PROJECT version 1-R9
 #by WEDUXOX/WEDUOFFICIAL - https://github.com/WeDu-official
 #I HAD MADE THIS PROJECT FOR FREE FOR ALL
 #from mankind to mankind... if I disappear don't worry it might just be my exams or anything else, but regardless
@@ -15,7 +15,7 @@ import traceback
 from typing import List, Tuple, Dict, Optional, Set, Any
 import discord
 import aiohttp
-
+from config_manager import get_config
 
 class DiscordCleanup:
     def __init__(self, bot, log, baseapi):
@@ -35,7 +35,7 @@ class DiscordCleanup:
 
         Uses same retry pattern as BASEapi._send_file_part_to_discord
         """
-        max_attempts = 15
+        max_attempts = get_config().get("delete", "max_retries", default=15)
         initial_delay = 2.0
         max_delay = 60.0
 

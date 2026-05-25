@@ -17,6 +17,10 @@
     "max_concurrent": 3,
     "max_retries": 15
   },
+  "delete": {
+    "max_concurrent": 3,
+    "max_retries": 15
+  },
   "database": {
     "default_extension": ".db",
     "vacuum_on_startup": false
